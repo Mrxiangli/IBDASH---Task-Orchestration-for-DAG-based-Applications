@@ -16,9 +16,8 @@ Below is the description of ibot_dag_orch.py configuration parameters
 | num_edge | number of edge devices will be used in the simulation |
 
 ### Simulation parameters:
-
-｜ param | description |
-｜ ----- | ----------- |
+| param | description |
+| ----- | ----------- |
 | ntbd | network bandwidth |
 | app_inst_name | the simulation time during when the task arrives randomly |
 | num_arrivals | number of task arrive during app_inst_name |
