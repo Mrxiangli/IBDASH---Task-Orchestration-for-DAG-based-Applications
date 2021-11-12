@@ -1,0 +1,79 @@
+{
+"Application":
+  {
+    "Edges":{
+      "s": ["0"],
+      "0": ["1","2","3"],
+      "1": ["2"],
+      "2": ["5"],
+      "3": ["4"],
+      "4": ["5"],
+      "5": ["end"]
+    },
+
+    "Vertices":[
+      {
+        "name": "s",
+        "file" : ["NULL",0],
+        "model": ["NULL",0],
+        "param": {}
+      },
+      {
+        "name": "0",
+        "file" : ["preProcessImage.py",10],
+        "model": ["NULL",0],
+        "param": {}
+      },
+      {
+        "name": "1",
+        "file" : ["convolution.py",15],
+        "model": ["conv", 1200],
+        "param":{
+          "kernel": 3,
+          "padding": 0,
+          "strides": 1
+        }
+      },
+      {
+        "name": "2",
+        "file" : ["convolution.py", 15],
+        "model": ["conv2",600],
+        "param":{
+          "kernel": 5,
+          "padding": 0,
+          "strides": 1
+        }
+      },
+      {
+        "name": "3",
+        "file" : ["convolution.py",15],
+        "model": ["conv1",2200],
+        "param":{
+          "kernel": 3,
+          "padding": 0,
+          "strides": 1
+        }
+      },
+        {
+        "name": "4",
+        "file" : ["convolution.py",15],
+        "model": ["conv",1200],
+        "param":{
+          "kernel": 3,
+          "padding": 0,
+          "strides": 1
+        }
+      },
+      {
+        "name": "5",
+        "file" : ["convolution2.py",15],
+        "model": ["conv",1200],
+        "param":{
+          "kernel": 3,
+          "padding": 0,
+          "strides": 1
+        }
+      }
+    ]
+  }
+}
