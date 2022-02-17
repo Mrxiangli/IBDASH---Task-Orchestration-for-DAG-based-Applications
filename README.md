@@ -18,5 +18,9 @@ Then we need to install the related packages
       
 Note that some packages are used in the profiling stage, so they are not necessary for the orchestration process.
 
+There are several hyper parameters that can be used to tune the simulation process
 
+- --app
+
+To start the orchestration process (execute ibdash.py),
 
