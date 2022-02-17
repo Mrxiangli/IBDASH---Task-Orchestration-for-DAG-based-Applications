@@ -20,7 +20,11 @@ Note that some packages are used in the profiling stage, so they are not necessa
 
 There are several hyper parameters that can be used to tune the simulation process
 
-- --app
+- --app app_name : this is used to select the application that we will run for the orchestration purposes, ie: matrix_app, video_app, mapreduce, lightgbm
+- --mc mc_file.xlsx : this is used to specify the .xlsx file that we used to save the (m, c) value pairs, ie ED_mc_mt.xlsx, ED_mc_mr.xlsx, ED_mc_va.xlsx, ED_mc_gbm.xlsx
+- --pf beta : this is a float number between 0 and 1 that indicates the probability of failure threshold
+- --rd gamma : this is used to set the replication degree allowed
+- --jp alpha : this is used to set the joint optimization parameter 
 
-To start the orchestration process (execute ibdash.py),
+By default, the matrix application will be used for orchestration 
 
