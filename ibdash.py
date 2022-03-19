@@ -108,7 +108,7 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 
 					ED_pred, t_pred=fail_prev_queue.pop(0)
 					t_pred_norm = fail_prev_norm_queue.pop(0)[1]
-					allocation[each_task]=ED_pred
+					allocation[each_task]=[ED_pred]
 				#	print("after first pop")
 				#	print(fail_prev_norm_queue)
 
