@@ -15,6 +15,7 @@ import json
 
 from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization
 from helpers import plot as dagplot
+from dispatcher import dispatch
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from sklearn import linear_model
@@ -47,6 +48,8 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 
 	k=0      	
 	i=0
+	instance_count = 0
+	dispatcher_dic={}
 
 	for time in clock_time:
 		time = round(time,2)
@@ -55,13 +58,11 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 		else:
 			i=0
 			i_norm = 0
-
-			#print("==========application instance at time {} starts scheduling===================================================".format(time))
-			#allocation dictionary to keep tract of the allocation for rach task
+			instance_count += 1
 			allocation={}
-
 			ibot_success = 1					#probability of success
 			tmp_pf_dic = {}						# temporary dictionary used to track probability of failure
+
 			for stage in vert_stage:			# go through each stage in the dag
 				longest_task_time=0
 				longest_task_time_norm=0
@@ -164,6 +165,7 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 							ProbF=new_ProbF
 							weighted_decision = weight*t_next_pred_norm+(1-weight)*ProbF
 							replication+=1
+							allocation[each_task].append(t_next_ed)
 							if t_next_pred > longest_task_time:
 								longest_task_time=t_next_pred
 								longest_task_time_norm = t_next_pred_norm
@@ -178,6 +180,8 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 				i=i+longest_task_time	# tracking the end to end latency
 				i_norm = i_norm + longest_task_time_norm
 
+			dispatcher_dic[instance_count]=allocation
+			dispatch(allocation)
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
@@ -196,7 +200,7 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 	for i in range(num_edge):
 		for j in range(task_types):
 			load_ed[i] = np.add(load_ed[i],ED_tasks[j][i])
-	return time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av, load_ed
+	return time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av, load_ed, dispatcher_dic
 
 def run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk):
 
@@ -799,6 +803,7 @@ if __name__ =='__main__':
 
 	dependency_dic=dict()
 
+
 	# The following code are for dependency purpose
 	for main_task in app_data['Application']['Edges']:
 		if main_task == 's':
@@ -823,11 +828,11 @@ if __name__ =='__main__':
 	ntbd = 600						#network bandwidth
 	app_inst_time = 1500			#the period of time that application instances might arrive
 	sim_time = 20000				#simulation period
-	num_arrivals = 200				#number of application instances arrived during app_ins_time	
+	num_arrivals = 1				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 8					#number of edge devices in DAG
+	num_edge_max = 3					#number of edge devices in DAG
 
 
 	#generate the random task arrival time 
@@ -896,15 +901,15 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 		
-		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed=run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,ed_cpu_regression,ed_latency_regression)
+		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
+		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
+		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
+		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
+		#time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
+		#time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,ed_cpu_regression,ed_latency_regression)
 
-
-
+		print(dispatcher_dic)
+"""
 		fig2, orch = plt.subplots(3,2,sharex=True)
 		fig2.tight_layout()
 		orch[0][0].plot(time_x,service_time_ibdash_x,"b-",markevery=10,label="service time")
@@ -1228,6 +1233,7 @@ if __name__ =='__main__':
 
 		#print(ed0_latency)
 """	
+"""
 	
 		schedule_time_ibot = schedule_time_ibot/num_arrivals		
 		schedule_time_petrel = schedule_time_petrel/num_arrivals
