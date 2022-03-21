@@ -22,7 +22,7 @@
         "file" : ["pca.py",10],
         "model": ["NULL",0],
         "depend":{"None":0},
-        "input":[["vectors_pca.txt",0]],
+        "input":[["Digits_Train.txt",0]],
         "param": {}
       },
       {
