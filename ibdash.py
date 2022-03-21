@@ -13,9 +13,9 @@ import math
 import random
 import json
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic
 from helpers import plot as dagplot
-from dispatcher import dispatch
+from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from sklearn import linear_model
@@ -25,7 +25,7 @@ from pathlib import Path
 pp = pprint.PrettyPrinter(indent=4)
 
 
-def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk):
+def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list,app_directory,inputfile_dic):
 	######### IBOT-PI ######### 
 	
 	pf_ibdash_av=[]
@@ -87,8 +87,6 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 								#add the data transfer time
 						if dependency_dic[int(each_task)] != [None]:
 							for each_dep in dependency_dic[int(each_task)]:
-								#print(dependency_dic[int(each_task)])
-								#print(each_dep)
 								if each_dep[1] == 1:
 									# obtain the result size, using a fixed size for testing
 									data_trans_tmp = math.ceil(1200/ntbd)
@@ -109,8 +107,6 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 					ED_pred, t_pred=fail_prev_queue.pop(0)
 					t_pred_norm = fail_prev_norm_queue.pop(0)[1]
 					allocation[each_task]=[ED_pred]
-				#	print("after first pop")
-				#	print(fail_prev_norm_queue)
 
 					# model uploading process		
 					if task_dict[each_task][1] not in model_info[ED_pred] and task_dict[each_task][1][0] != "NULL":			 			# if model is not available need to upload model
@@ -181,7 +177,7 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
-			dispatch(allocation)
+			dispatch(app_directory,allocation,edge_list,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
@@ -800,29 +796,14 @@ if __name__ =='__main__':
 	vert_dict, vert_stage = app_stage(edge_adj)
 	task_types = len(task_dict)
 
+	dependency_dic=dependency_dic(app_data,task_dict)
+	inputfile_dic=inputfile_dic(app_data)
+	task_file_dic={} #use this dictionary to track the file need to be used in each task
+	for task in app_data['Application']['Vertices']:
+		task_file_dic[task['name']]=task['file'][0]
 
-	dependency_dic=dict()
-
-
-	# The following code are for dependency purpose
-	for main_task in app_data['Application']['Edges']:
-		if main_task == 's':
-			for depend_task in app_data['Application']['Edges'][main_task]:
-				if depend_task not in dependency_dic.keys():
-					dependency_dic[int(depend_task)]=[None]
-				else:
-					dependency_dic[int(depend_task)].append(None)
-		if main_task != 's' and main_task != 'end':
-			for depend_task in app_data['Application']['Edges'][main_task]:
-				if depend_task != "end":
-					if depend_task not in dependency_dic.keys():
-						dependency_dic[int(depend_task)]=[(main_task,task_dict[depend_task][2][main_task])]
-						
-					else:
-						dependency_dic[int(depend_task)].append((main_task,task_dict[depend_task][2][main_task]))
 
 	EDmc_file=os.path.join(app_path,args.mc) # this file has the (m,c) value pairs and should be updated dynamically later on
-
 	# The following parameters can be used to tune the simulation
 	random.seed(0)
 	ntbd = 600						#network bandwidth
@@ -833,6 +814,29 @@ if __name__ =='__main__':
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
 	num_edge_max = 3					#number of edge devices in DAG
+
+	edge_list=[]
+	access_dict={}
+	access_dict[0]="ec2-54-159-18-65.compute-1.amazonaws.com"
+	access_dict[1]="ec2-44-202-152-93.compute-1.amazonaws.com"
+	access_dict[2]="ec2-3-239-121-59.compute-1.amazonaws.com"
+
+	dependency_file = "dependency_file.json"
+	with open(dependency_file,'w') as depend_file:
+		depend_file.write(json.dumps(dependency_dic))
+	depend_file.close()
+
+	task_file = "task_file.json"
+	with open(task_file,'w') as tk_file:
+		tk_file.write(json.dumps(task_file_dic))
+	tk_file.close()
+
+	for i in range(3):
+		client_connect = createSSHClient(access_dict[i],"IBDASH.pem")
+		edge_list.append(client_connect)
+	for each in edge_list:
+		each.put(dependency_file)
+		each.put(task_file)
 
 
 	#generate the random task arrival time 
@@ -858,6 +862,8 @@ if __name__ =='__main__':
 	pf_rr_av=[]
 	pf_rd_av=[]
 	pf_lats_av=[]
+
+	app_directory = "/Users/jonny/Desktop/IBDASH_V2/profile_data/lightgbm"
 
 
 	# This outer loop can be used to check for the orchestration overhead with setting the timer at correct place
@@ -901,7 +907,7 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 		
-		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
+		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,edge_list,app_directory,inputfile_dic)
 		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
 		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
 		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)

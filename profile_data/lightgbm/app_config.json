@@ -13,21 +13,24 @@
         "name": "s",
         "file" : ["NULL",0],
         "model": ["NULL",0],
-        "input":{"None":0},
+        "depend":{"None":0},
+        "input":{},
         "param": {}
       },
       {
         "name": "0",
         "file" : ["pca.py",10],
         "model": ["NULL",0],
-        "input":{"None":0},
+        "depend":{"None":0},
+        "input":[["vectors_pca.txt",0]],
         "param": {}
       },
       {
         "name": "1",
         "file" : ["train.py",15],
         "model": ["conv", 1200],
-        "input":{"0":0},
+        "depend":{"0":0},
+        "input":[["Digit_Train_transform.txt",1]],
         "param":{
           "kernel": 3,
           "padding": 0,
@@ -36,15 +39,17 @@
       },
       {
         "name": "2",
-        "file" : ["com.py", 15],
+        "file" : ["com_test.py", 15],
         "model": ["conv2",600],
-        "input":{"1":0},
+        "depend":{"1":0},
+        "input":[["lightGBM_model",1]],
         "param":{
           "kernel": 5,
           "padding": 0,
           "strides": 1
         }
       }
+
     ]
   }
 }
