@@ -249,7 +249,19 @@ def inputfile_dic(app_data):
 	return inputdict
 
 
+def dependency_lookup(app_data):
+	depend_lookup={}
+	for each in app_data['Application']['Edges']:
+		if each!="s":
+			depend_lookup[each] = app_data['Application']['Edges'][each]
+	return depend_lookup
 
+def inputfile_lookup(app_data):
+	input_lookup={}
+	for each in app_data['Application']['Vertices']:
+		if each['name']!="s":
+			input_lookup[each['name']] = each['input']
+	return input_lookup
 
 
 

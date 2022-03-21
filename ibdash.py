@@ -13,7 +13,7 @@ import math
 import random
 import json
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup
 from helpers import plot as dagplot
 from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
@@ -797,7 +797,9 @@ if __name__ =='__main__':
 	task_types = len(task_dict)
 
 	dependency_dic=dependency_dic(app_data,task_dict)
+	depend_lookup=dependency_lookup(app_data)
 	inputfile_dic=inputfile_dic(app_data)
+	input_lookup=inputfile_lookup(app_data)
 	task_file_dic={} #use this dictionary to track the file need to be used in each task
 	for task in app_data['Application']['Vertices']:
 		task_file_dic[task['name']]=task['file'][0]
@@ -817,9 +819,9 @@ if __name__ =='__main__':
 
 	edge_list=[]
 	access_dict={}
-	access_dict[0]="ec2-54-159-18-65.compute-1.amazonaws.com"
-	access_dict[1]="ec2-44-202-152-93.compute-1.amazonaws.com"
-	access_dict[2]="ec2-3-239-121-59.compute-1.amazonaws.com"
+	access_dict[0]="ec2-3-227-217-24.compute-1.amazonaws.com"
+	access_dict[1]="ec2-54-175-25-56.compute-1.amazonaws.com"
+	access_dict[2]="ec2-44-197-243-2.compute-1.amazonaws.com"
 
 	dependency_file = "dependency_file.json"
 	with open(dependency_file,'w') as depend_file:
@@ -831,12 +833,24 @@ if __name__ =='__main__':
 		tk_file.write(json.dumps(task_file_dic))
 	tk_file.close()
 
+	dependency_lookup = "depend_lookup.json"
+	with open(dependency_lookup,'w') as lk_file:
+		lk_file.write(json.dumps(depend_lookup))
+	lk_file.close()
+
+	input_lp = "input_lookup.json"
+	with open(input_lp,'w') as lp_file:
+		lp_file.write(json.dumps(input_lookup))
+	lp_file.close()
+
 	for i in range(3):
 		client_connect = createSSHClient(access_dict[i],"IBDASH.pem")
 		edge_list.append(client_connect)
 	for each in edge_list:
 		each.put(dependency_file)
 		each.put(task_file)
+		each.put(dependency_lookup)
+		each.put(input_lp)
 
 
 	#generate the random task arrival time 
@@ -863,7 +877,7 @@ if __name__ =='__main__':
 	pf_rd_av=[]
 	pf_lats_av=[]
 
-	app_directory = "/Users/jonny/Desktop/IBDASH_V2/profile_data/lightgbm"
+	app_directory = os.path.join(profile_data_path,args.app)
 
 
 	# This outer loop can be used to check for the orchestration overhead with setting the timer at correct place
