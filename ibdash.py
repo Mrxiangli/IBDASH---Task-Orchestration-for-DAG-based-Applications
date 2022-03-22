@@ -819,9 +819,9 @@ if __name__ =='__main__':
 
 	edge_list=[]
 	access_dict={}
-	access_dict[0]="ec2-3-227-217-24.compute-1.amazonaws.com"
-	access_dict[1]="ec2-54-175-25-56.compute-1.amazonaws.com"
-	access_dict[2]="ec2-44-197-243-2.compute-1.amazonaws.com"
+	access_dict[0]="ec2-3-80-209-242.compute-1.amazonaws.com"
+	access_dict[1]="ec2-34-227-89-78.compute-1.amazonaws.com"
+	access_dict[2]="ec2-34-226-234-103.compute-1.amazonaws.com"
 
 	dependency_file = "dependency_file.json"
 	with open(dependency_file,'w') as depend_file:
@@ -846,6 +846,7 @@ if __name__ =='__main__':
 	for i in range(3):
 		client_connect = createSSHClient(access_dict[i],"IBDASH.pem")
 		edge_list.append(client_connect)
+
 	for each in edge_list:
 		each.put(dependency_file)
 		each.put(task_file)
