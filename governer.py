@@ -59,6 +59,9 @@ if __name__ =='__main__':
 
 	edge_list_scp, edge_list_ssh = create_edge_server()
 
+	#need to source the bashrc file to activate the corresponding conda enviroment
+	#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("source ~/.bashrc")
+
 	# loading all the json files to get the status of the allocation
 	allocation_dic=json_file_loader(args.all)
 	dependency_dic=json_file_loader("dependency_file.json")
@@ -87,13 +90,13 @@ if __name__ =='__main__':
 		# drop the input file to the designated device
 		edge_list_scp[ed].put(next_stage_dict[each_tk][0][0])
 		command = "python governer.py --all {} --tk {}".format("allocation_1.json",each_tk)
-		stdin,stdout,stderr=edge_list_ssh[ed].exec_command("sh test.sh")
-		stdin,stdout,stderr=edge_list_ssh[ed].exec_command("conda env list")
-		for line in stdout.read().splitlines():
+		print(command)
+		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("sh test.sh")
+		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("echo 'conda activate ibdash' >> ~/.bashrc")
+		stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
+		for line in stderr.read().splitlines():
 			print(line)
 		# start the execution 
-
-
 
 
 	#print(next_stage_dict)
