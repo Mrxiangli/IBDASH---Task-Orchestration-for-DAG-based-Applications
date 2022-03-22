@@ -30,7 +30,7 @@
         "file" : ["train.py",15],
         "model": ["conv", 1200],
         "depend":{"0":0},
-        "input":[["Digit_Train_transform.txt",1]],
+        "input":[["Digits_Train_Transform.txt",1]],
         "param":{
           "kernel": 3,
           "padding": 0,

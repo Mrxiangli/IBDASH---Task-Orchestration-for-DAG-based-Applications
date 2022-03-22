@@ -3,6 +3,9 @@ import configparser
 import json
 import subprocess
 import os
+import sys
+import paramiko
+from scp import SCPClient
 
 def json_file_loader(file):
 	data = json.load(open(file))
@@ -24,6 +27,27 @@ def next_task(current_tk,depend_lookup,input_lookup):
 		next_stage_dict[each] = next_file
 	return next_stage_dict
 
+#creat EC2 client for dispatching
+def createSSHClient(server, password):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(server,username='ec2-user', key_filename=password)
+    client_scp = SCPClient(client.get_transport())
+    return client_scp, client
+
+def create_edge_server():
+	edge_list_scp=[]
+	edge_list_ssh=[]
+	access_dict={}
+	access_dict[0]="ec2-3-80-209-242.compute-1.amazonaws.com"
+	access_dict[1]="ec2-34-227-89-78.compute-1.amazonaws.com"
+	access_dict[2]="ec2-34-226-234-103.compute-1.amazonaws.com"
+	for i in range(3):
+		client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
+		edge_list_scp.append(client_scp)
+		edge_list_ssh.append(client_ssh)
+	return edge_list_scp,edge_list_ssh
+
 
 #Running this on each edge
 if __name__ =='__main__':
@@ -32,6 +56,8 @@ if __name__ =='__main__':
 	parser.add_argument('--all', type=str, nargs="?",help='allocation json file')
 	parser.add_argument('--tk', type=int, help="the task that suppose to be executed in the process")
 	args = parser.parse_args()
+
+	edge_list_scp, edge_list_ssh = create_edge_server()
 
 	# loading all the json files to get the status of the allocation
 	allocation_dic=json_file_loader(args.all)
@@ -48,28 +74,36 @@ if __name__ =='__main__':
 	out,err = p.communicate()
 	if err:
 		print("task {} did not finish execution, exiting!".format(task))
-		os.exit()
+		sys.exit()
 
 	#looking for the dependency and find the next device and task
 	next_stage_dict=next_task(args.tk,depend_lookup,input_lookup)
 
 	#send the output from this stage to next device
-	for each_tk in bext_stage_dict.keys():
-		ed = allocation_dic[each_tk]
+	for each_tk in next_stage_dict.keys():
+		print(each_tk)
+		ed = allocation_dic[each_tk][0]
+		print(next_stage_dict[each_tk])
 		# drop the input file to the designated device
+		edge_list_scp[ed].put(next_stage_dict[each_tk][0][0])
+		command = "python governer.py --all {} --tk {}".format("allocation_1.json",each_tk)
+		stdin,stdout,stderr=edge_list_ssh[ed].exec_command("sh test.sh")
+		stdin,stdout,stderr=edge_list_ssh[ed].exec_command("conda env list")
+		for line in stdout.read().splitlines():
+			print(line)
 		# start the execution 
 
-	
 
 
-	print(next_stage_dict)
+
+	#print(next_stage_dict)
 
 
-	print(input_lookup)
-	print(depend_lookup)
-	print(task)
+	#print(input_lookup)
+	#print(depend_lookup)
+	#print(task)
 	# 
 	print(allocation_dic)
-	print(dependency_dic)
-	print(task_dic)
+	#print(dependency_dic)
+	#print(task_dic)
 	
