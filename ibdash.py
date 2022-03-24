@@ -25,7 +25,7 @@ from pathlib import Path
 pp = pprint.PrettyPrinter(indent=4)
 
 
-def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list,app_directory,inputfile_dic):
+def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
 	######### IBOT-PI ######### 
 	
 	pf_ibdash_av=[]
@@ -177,7 +177,7 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
-			dispatch(app_directory,allocation,edge_list,task_file_dic, instance_count, dependency_dic,inputfile_dic)
+			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
@@ -817,11 +817,12 @@ if __name__ =='__main__':
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
 	num_edge_max = 3					#number of edge devices in DAG
 
-	edge_list=[]
+	edge_list_scp=[]
+	edge_list_ssh=[]
 	access_dict={}
-	access_dict[0]="ec2-3-80-209-242.compute-1.amazonaws.com"
-	access_dict[1]="ec2-34-227-89-78.compute-1.amazonaws.com"
-	access_dict[2]="ec2-34-226-234-103.compute-1.amazonaws.com"
+	access_dict[0]="ec2-54-234-247-44.compute-1.amazonaws.com"
+	access_dict[1]="ec2-52-206-14-159.compute-1.amazonaws.com"
+	access_dict[2]="ec2-3-239-129-201.compute-1.amazonaws.com"
 
 	dependency_file = "dependency_file.json"
 	with open(dependency_file,'w') as depend_file:
@@ -844,14 +845,17 @@ if __name__ =='__main__':
 	lp_file.close()
 
 	for i in range(3):
-		client_connect = createSSHClient(access_dict[i],"IBDASH.pem")
-		edge_list.append(client_connect)
+		client_scp,client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
+		client_ssh.exec_command("source ~/.bashrc")
+		edge_list_scp.append(client_scp)
+		edge_list_ssh.append(client_ssh)
 
-	for each in edge_list:
+	for each in edge_list_scp:
 		each.put(dependency_file)
 		each.put(task_file)
 		each.put(dependency_lookup)
 		each.put(input_lp)
+		each.put("governer.py")
 
 
 	#generate the random task arrival time 
@@ -922,7 +926,7 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 		
-		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,edge_list,app_directory,inputfile_dic)
+		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
 		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
 		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
 		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
