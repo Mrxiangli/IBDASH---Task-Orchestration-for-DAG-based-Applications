@@ -11,8 +11,8 @@ def json_file_loader(file):
 	data = json.load(open(file))
 	return data
 
-def execute_main_task(main_task):
-	command="python {}".format(main_task)
+def execute_main_task(main_task,instance_count):
+	command="python {} --count {}".format(main_task,instance_count)
 	return command
 
 def task_lookup(tk, task_file):
@@ -39,9 +39,9 @@ def create_edge_server():
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	access_dict={}
-	access_dict[0]="ec2-3-80-209-242.compute-1.amazonaws.com"
-	access_dict[1]="ec2-34-227-89-78.compute-1.amazonaws.com"
-	access_dict[2]="ec2-34-226-234-103.compute-1.amazonaws.com"
+	access_dict[0]="ec2-54-234-247-44.compute-1.amazonaws.com"
+	access_dict[1]="ec2-52-206-14-159.compute-1.amazonaws.com"
+	access_dict[2]="ec2-3-239-129-201.compute-1.amazonaws.com"
 	for i in range(3):
 		client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
 		edge_list_scp.append(client_scp)
@@ -58,11 +58,15 @@ if __name__ =='__main__':
 	args = parser.parse_args()
 
 	edge_list_scp, edge_list_ssh = create_edge_server()
+	#edge_list_scp[1].put("governer.py")
+	#edge_list_ssh[1].exec_command("source ~/.bashrc")
+	#sys.exit()
 
 	#need to source the bashrc file to activate the corresponding conda enviroment
 	#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("source ~/.bashrc")
 
 	# loading all the json files to get the status of the allocation
+	instance_count=args.all.split('.')[0].split('_')[1]
 	allocation_dic=json_file_loader(args.all)
 	dependency_dic=json_file_loader("dependency_file.json")
 	task_dic=json_file_loader("task_file.json")
@@ -71,10 +75,11 @@ if __name__ =='__main__':
 
 	#execute the main task related to this node
 	task=task_lookup(args.tk, task_dic)
-	command=execute_main_task(task)
+	command=execute_main_task(task, instance_count)
 	print(command)
 	p=subprocess.Popen([command],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 	out,err = p.communicate()
+	print(err)
 	if err:
 		print("task {} did not finish execution, exiting!".format(task))
 		sys.exit()
@@ -88,13 +93,12 @@ if __name__ =='__main__':
 		ed = allocation_dic[each_tk][0]
 		print(next_stage_dict[each_tk])
 		# drop the input file to the designated device
-		edge_list_scp[ed].put(next_stage_dict[each_tk][0][0])
+		infile = next_stage_dict[each_tk][0][0].split('.')[0]+"_"+str(instance_count)+".txt"
+		edge_list_scp[ed].put(infile)
 		command = "python governer.py --all {} --tk {}".format("allocation_1.json",each_tk)
 		print(command)
-		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("sh test.sh")
-		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("echo 'conda activate ibdash' >> ~/.bashrc")
 		stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
-		for line in stderr.read().splitlines():
+		for line in stdout.read().splitlines():
 			print(line)
 		# start the execution 
 
