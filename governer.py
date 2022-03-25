@@ -23,15 +23,19 @@ def next_task(current_tk,depend_lookup,input_lookup):
 	next_stage_tasks = depend_lookup[str(current_tk)]
 	next_stage_dict = {}
 	for each in next_stage_tasks:
-		next_file=input_lookup[str(each)]
-		next_stage_dict[each] = next_file
+		if each != 'end':
+			next_file=input_lookup[str(each)]
+			next_stage_dict[each] = next_file
 	return next_stage_dict
 
 #creat EC2 client for dispatching
 def createSSHClient(server, password):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(server,username='ec2-user', key_filename=password)
+    if password.split(".")[1] == "pem":
+    	client.connect(server,username='ec2-user', key_filename=password)
+    else:
+    	client.connect(server,username='jonny', key_filename=password)
     client_scp = SCPClient(client.get_transport())
     return client_scp, client
 
@@ -42,10 +46,15 @@ def create_edge_server():
 	access_dict[0]="ec2-54-234-247-44.compute-1.amazonaws.com"
 	access_dict[1]="ec2-52-206-14-159.compute-1.amazonaws.com"
 	access_dict[2]="ec2-3-239-129-201.compute-1.amazonaws.com"
-	for i in range(3):
-		client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
+	access_dict[3]="128.46.73.218"
+	for i in range(4):
+		if i < 3:
+			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
+		else:
+			client_scp, client_ssh = createSSHClient(access_dict[i], password="id_rsa.pub")
 		edge_list_scp.append(client_scp)
 		edge_list_ssh.append(client_ssh)
+
 	return edge_list_scp,edge_list_ssh
 
 
@@ -62,6 +71,8 @@ if __name__ =='__main__':
 	#edge_list_ssh[1].exec_command("source ~/.bashrc")
 	#sys.exit()
 
+
+
 	#need to source the bashrc file to activate the corresponding conda enviroment
 	#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("source ~/.bashrc")
 
@@ -72,6 +83,9 @@ if __name__ =='__main__':
 	task_dic=json_file_loader("task_file.json")
 	depend_lookup=json_file_loader("depend_lookup.json")
 	input_lookup=json_file_loader("input_lookup.json")
+
+	#print(input_lookup)
+	#print(depend_lookup)
 
 	#execute the main task related to this node
 	task=task_lookup(args.tk, task_dic)
@@ -86,17 +100,20 @@ if __name__ =='__main__':
 
 	#looking for the dependency and find the next device and task
 	next_stage_dict=next_task(args.tk,depend_lookup,input_lookup)
-
+	#Curent task is the last task
+	if len(next_stage_dict) == 0:
+		print(input_lookup['end'])
+		edge_list_scp[3].put("predict.txt")
 	#send the output from this stage to next device
 	for each_tk in next_stage_dict.keys():
-		print(each_tk)
+		#print(each_tk)
 		ed = allocation_dic[each_tk][0]
-		print(next_stage_dict[each_tk])
+		#print(next_stage_dict[each_tk])
 		# drop the input file to the designated device
 		infile = next_stage_dict[each_tk][0][0].split('.')[0]+"_"+str(instance_count)+".txt"
 		edge_list_scp[ed].put(infile)
 		command = "python governer.py --all {} --tk {}".format("allocation_1.json",each_tk)
-		print(command)
+		#print(command)
 		stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
 		for line in stdout.read().splitlines():
 			print(line)
@@ -106,11 +123,8 @@ if __name__ =='__main__':
 	#print(next_stage_dict)
 
 
-	#print(input_lookup)
-	#print(depend_lookup)
+
 	#print(task)
 	# 
-	print(allocation_dic)
-	#print(dependency_dic)
-	#print(task_dic)
+	
 	

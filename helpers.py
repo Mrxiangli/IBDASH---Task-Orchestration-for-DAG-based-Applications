@@ -225,20 +225,21 @@ def dependency_dic(app_data,task_dict):
 	dependency_dic=dict()
 	# The following code are for dependency purpose
 	for main_task in app_data['Application']['Edges']:
-		if main_task == 's':
-			for depend_task in app_data['Application']['Edges'][main_task]:
-				if depend_task not in dependency_dic.keys():
-					dependency_dic[int(depend_task)]=[None]
-				else:
-					dependency_dic[int(depend_task)].append(None)
-		if main_task != 's' and main_task != 'end':
-			for depend_task in app_data['Application']['Edges'][main_task]:
-				if depend_task != "end":
+		if main_task != 'end':
+			if main_task == 's':
+				for depend_task in app_data['Application']['Edges'][main_task]:
 					if depend_task not in dependency_dic.keys():
-						dependency_dic[int(depend_task)]=[(main_task,task_dict[depend_task][2][main_task])]
-						# the second value is used to track the type of dependency
+						dependency_dic[int(depend_task)]=[None]
 					else:
-						dependency_dic[int(depend_task)].append((main_task,task_dict[depend_task][2][main_task]))
+						dependency_dic[int(depend_task)].append(None)
+			if main_task != 's' and main_task != 'end':
+				for depend_task in app_data['Application']['Edges'][main_task]:
+					if depend_task != "end":
+						if depend_task not in dependency_dic.keys():
+							dependency_dic[int(depend_task)]=[(main_task,task_dict[depend_task][2][main_task])]
+							# the second value is used to track the type of dependency
+						else:
+							dependency_dic[int(depend_task)].append((main_task,task_dict[depend_task][2][main_task]))
 	return dependency_dic
 
 def inputfile_dic(app_data):
