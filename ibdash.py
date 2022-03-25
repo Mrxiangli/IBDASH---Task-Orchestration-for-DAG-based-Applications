@@ -794,7 +794,7 @@ if __name__ =='__main__':
 	task_dict=task_info(vertices)
 	dagplot(original_dag)
 	vert_dict, vert_stage = app_stage(edge_adj)
-	task_types = len(task_dict)
+	task_types = len(task_dict)-1
 
 	dependency_dic=dependency_dic(app_data,task_dict)
 	depend_lookup=dependency_lookup(app_data)
@@ -823,6 +823,7 @@ if __name__ =='__main__':
 	access_dict[0]="ec2-54-234-247-44.compute-1.amazonaws.com"
 	access_dict[1]="ec2-52-206-14-159.compute-1.amazonaws.com"
 	access_dict[2]="ec2-3-239-129-201.compute-1.amazonaws.com"
+	access_dict[3]="128.46.73.218"
 
 	dependency_file = "dependency_file.json"
 	with open(dependency_file,'w') as depend_file:
@@ -844,12 +845,15 @@ if __name__ =='__main__':
 		lp_file.write(json.dumps(input_lookup))
 	lp_file.close()
 
-	for i in range(3):
-		client_scp,client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
-		client_ssh.exec_command("source ~/.bashrc")
+	for i in range(4):
+		if i < 3:
+			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
+			client_ssh.exec_command("source ~/.bashrc")
+		else:
+			client_scp, client_ssh = createSSHClient(access_dict[i],"id_rsa.pub" )
 		edge_list_scp.append(client_scp)
 		edge_list_ssh.append(client_ssh)
-
+	
 	for each in edge_list_scp:
 		each.put(dependency_file)
 		each.put(task_file)

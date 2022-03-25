@@ -48,8 +48,19 @@
           "padding": 0,
           "strides": 1
         }
+      },
+      {
+        "name": "end",
+        "file" : ["None", 0],
+        "model": ["None",600],
+        "depend":{"2":0},
+        "input":[["predict.txt",1]],
+        "param":{
+          "kernel": 5,
+          "padding": 0,
+          "strides": 1
+        }
       }
-
     ]
   }
 }

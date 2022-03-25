@@ -9,7 +9,10 @@ import sys
 def createSSHClient(server, password):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(server,username='ec2-user', key_filename=password)
+    if password.split('.')[1]=="pem":
+    	client.connect(server,username='ec2-user', key_filename=password)
+    else:
+    	client.connect(server,username='jonny', key_filename=password)
     client_scp = SCPClient(client.get_transport())
     return client_scp, client
 
@@ -41,11 +44,11 @@ def dispatch(directory, allocation,edge_list_scp, edge_list_ssh,task_dict, insta
 			command = "python governer.py --all {} --tk {}".format("allocation_1.json",eachtask)
 			print(command)
 			stdin,stdout,stderr=edge_list_ssh[allocation[str(eachtask)][0]].exec_command(command)
-			for line in stdout.read().splitlines():
+			for line in stderr.read().splitlines():
 				print(line)
 
-	print(dependency_dic)
-	print(allocation)
+	#print(dependency_dic)
+	#print(allocation)
 	# need to generated an automated python script to accomplish the task execution
 	# in .json file, define the input file as x:0/1, 0 means non-intermediate files
 	# Put initial input for the first stage of tasks
