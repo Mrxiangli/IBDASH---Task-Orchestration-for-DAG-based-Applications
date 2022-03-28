@@ -43,13 +43,13 @@ def create_edge_server():
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	access_dict={}
-	access_dict[0]="ec2-54-234-247-44.compute-1.amazonaws.com"
-	access_dict[1]="ec2-52-206-14-159.compute-1.amazonaws.com"
-	access_dict[2]="ec2-3-239-129-201.compute-1.amazonaws.com"
+	access_dict[0]="ec2-54-221-77-125.compute-1.amazonaws.com"
+	access_dict[1]="ec2-100-24-240-119.compute-1.amazonaws.com"
+	access_dict[2]="ec2-3-239-58-192.compute-1.amazonaws.com"
 	access_dict[3]="128.46.73.218"
 	for i in range(4):
 		if i < 3:
-			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
+			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")
 		else:
 			client_scp, client_ssh = createSSHClient(access_dict[i], password="id_rsa.pub")
 		edge_list_scp.append(client_scp)
@@ -64,6 +64,7 @@ if __name__ =='__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--all', type=str, nargs="?",help='allocation json file')
 	parser.add_argument('--tk', type=int, help="the task that suppose to be executed in the process")
+	parser.add_argument('--ic',type=int,help="instance count")
 	args = parser.parse_args()
 
 	edge_list_scp, edge_list_ssh = create_edge_server()
@@ -103,7 +104,8 @@ if __name__ =='__main__':
 	#Curent task is the last task
 	if len(next_stage_dict) == 0:
 		print(input_lookup['end'])
-		edge_list_scp[3].put("predict.txt")
+		result_file = "predict_"+str(args.ic)+".txt"
+		edge_list_scp[3].put(result_file,"/home/jonny/Documents/Research/IBDASH_V2")
 	#send the output from this stage to next device
 	for each_tk in next_stage_dict.keys():
 		#print(each_tk)
@@ -112,7 +114,8 @@ if __name__ =='__main__':
 		# drop the input file to the designated device
 		infile = next_stage_dict[each_tk][0][0].split('.')[0]+"_"+str(instance_count)+".txt"
 		edge_list_scp[ed].put(infile)
-		command = "python governer.py --all {} --tk {}".format("allocation_1.json",each_tk)
+		allocation_file = "allocation_"+str(args.ic)+".json"
+		command = "python governer.py --all {} --tk {} --ic {}".format(allocation_file,each_tk,args.ic)
 		#print(command)
 		stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
 		for line in stdout.read().splitlines():

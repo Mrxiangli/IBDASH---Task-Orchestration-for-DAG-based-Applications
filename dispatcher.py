@@ -38,13 +38,15 @@ def dispatch(directory, allocation,edge_list_scp, edge_list_ssh,task_dict, insta
 			if each_file[1]==0:
 				input_path = os.path.join(directory,each_file[0])
 				edge_list_scp[allocation[each][0]].put(input_path)
+				#### need to figure out why vectors not passed
 
 	for eachtask in dependency_dic.keys():
 		if dependency_dic[eachtask]==[None]:
-			command = "python governer.py --all {} --tk {}".format("allocation_1.json",eachtask)
+			allocation_file = "allocation_"+str(instance_count)+".json"
+			command = "python governer.py --all {} --tk {} --ic {}".format(allocation_file,eachtask,instance_count)
 			print(command)
 			stdin,stdout,stderr=edge_list_ssh[allocation[str(eachtask)][0]].exec_command(command)
-			for line in stderr.read().splitlines():
+			for line in stdout.read().splitlines():
 				print(line)
 
 	#print(dependency_dic)
