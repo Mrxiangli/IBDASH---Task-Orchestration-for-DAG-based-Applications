@@ -30,7 +30,7 @@
         "file" : ["train.py",15],
         "model": ["conv", 1200],
         "depend":{"0":0},
-        "input":[["Digits_Train_Transform.txt",1]],
+        "input":[["Digits_Train_Transform_",1]],
         "param":{
           "kernel": 3,
           "padding": 0,
@@ -42,7 +42,7 @@
         "file" : ["com_test.py", 15],
         "model": ["conv2",600],
         "depend":{"1":0},
-        "input":[["lightGBM_model",1],["Digits_Test.txt",0]],
+        "input":[["lightGBM_model",1],["Digits_Test.txt",0],["vectors_pca_",1]],
         "param":{
           "kernel": 5,
           "padding": 0,

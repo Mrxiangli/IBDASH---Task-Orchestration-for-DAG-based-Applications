@@ -1,0 +1,1 @@
+{"0": [["Digits_Train.txt", 0]], "1": [["Digits_Train_Transform_", 1]], "2": [["lightGBM_model", 1], ["Digits_Test.txt", 0], ["vectors_pca_", 1]], "end": [["predict.txt", 1]]}

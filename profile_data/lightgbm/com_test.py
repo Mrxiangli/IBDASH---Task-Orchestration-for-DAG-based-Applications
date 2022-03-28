@@ -20,7 +20,7 @@ if __name__ =='__main__':
 	num_models = 1
 
 	path_parent = os.getcwd()
-	file_vector = "vectors_pca.txt.npy"
+	file_vector = "vectors_pca_"+str(args.count)+".npy"
 	file_test = "Digits_Test.txt"
 
 	vectors = np.load(os.path.join(path_parent,file_vector))
@@ -57,7 +57,8 @@ if __name__ =='__main__':
 		if means[i] == y_test[i]:
 		   count_match = count_match +1
 	acc = count_match/len(y_pred)
-	savetxt("predict.txt", y_pred, delimiter="\t")
+	result_file = "predict_" + str(args.count)+".txt"
+	savetxt(result_file, y_pred, delimiter="\t")
 	print("accuracy: {}".format(acc))
 	end=timer.time()
 	print("com_test "+str((end-start)/100))

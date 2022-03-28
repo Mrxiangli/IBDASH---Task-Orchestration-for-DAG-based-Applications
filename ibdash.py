@@ -12,6 +12,7 @@ import pprint
 import math
 import random
 import json
+import subprocess
 
 from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup
 from helpers import plot as dagplot
@@ -25,7 +26,7 @@ from pathlib import Path
 pp = pprint.PrettyPrinter(indent=4)
 
 
-def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
+def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
 	######### IBOT-PI ######### 
 	
 	pf_ibdash_av=[]
@@ -177,6 +178,7 @@ def run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
+			print(allocation)
 			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
@@ -811,7 +813,7 @@ if __name__ =='__main__':
 	ntbd = 600						#network bandwidth
 	app_inst_time = 1500			#the period of time that application instances might arrive
 	sim_time = 20000				#simulation period
-	num_arrivals = 1				#number of application instances arrived during app_ins_time	
+	num_arrivals = 2				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
@@ -820,9 +822,9 @@ if __name__ =='__main__':
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	access_dict={}
-	access_dict[0]="ec2-54-234-247-44.compute-1.amazonaws.com"
-	access_dict[1]="ec2-52-206-14-159.compute-1.amazonaws.com"
-	access_dict[2]="ec2-3-239-129-201.compute-1.amazonaws.com"
+	access_dict[0]="ec2-54-221-77-125.compute-1.amazonaws.com"
+	access_dict[1]="ec2-100-24-240-119.compute-1.amazonaws.com"
+	access_dict[2]="ec2-3-239-58-192.compute-1.amazonaws.com"
 	access_dict[3]="128.46.73.218"
 
 	dependency_file = "dependency_file.json"
@@ -847,19 +849,20 @@ if __name__ =='__main__':
 
 	for i in range(4):
 		if i < 3:
-			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH.pem")
+			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")
 			client_ssh.exec_command("source ~/.bashrc")
 		else:
 			client_scp, client_ssh = createSSHClient(access_dict[i],"id_rsa.pub" )
 		edge_list_scp.append(client_scp)
 		edge_list_ssh.append(client_ssh)
-	
+
 	for each in edge_list_scp:
 		each.put(dependency_file)
 		each.put(task_file)
 		each.put(dependency_lookup)
 		each.put(input_lp)
 		each.put("governer.py")
+		
 
 
 	#generate the random task arrival time 
@@ -929,15 +932,19 @@ if __name__ =='__main__':
 		edge_info=dict()
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
-		
-		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
+
+		time_file = open("time.txt","a")
+		p=subprocess.Popen(["date +%s%N"],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
+		out,err = p.communicate()
+		time_file.write(str(out))
+		time_file.close()
+		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
 		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
 		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
 		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
 		#time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
 		#time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,ed_cpu_regression,ed_latency_regression)
 
-		print(dispatcher_dic)
 """
 		fig2, orch = plt.subplots(3,2,sharex=True)
 		fig2.tight_layout()

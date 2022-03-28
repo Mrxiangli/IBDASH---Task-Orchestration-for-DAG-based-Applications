@@ -44,7 +44,8 @@ if __name__ =='__main__':
 	# project data
 	PA = vectors.T.dot(CA.T)
 
-	np.save("vectors_pca.txt", vectors)
+	vector_file = "vectors_pca_"+str(args.count)
+	np.save(vector_file, vectors)
 
 	first_n_A = PA.T[:,0:10].real
 	train_labels =  train_labels.reshape(train_labels.shape[0],1)
