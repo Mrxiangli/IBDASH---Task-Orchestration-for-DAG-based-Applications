@@ -14,7 +14,7 @@ import random
 import json
 import subprocess
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup
 from helpers import plot as dagplot
 from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
@@ -802,6 +802,7 @@ if __name__ =='__main__':
 	depend_lookup=dependency_lookup(app_data)
 	inputfile_dic=inputfile_dic(app_data)
 	input_lookup=inputfile_lookup(app_data)
+	output_lookup=output_lookup(app_data)
 	task_file_dic={} #use this dictionary to track the file need to be used in each task
 	for task in app_data['Application']['Vertices']:
 		task_file_dic[task['name']]=task['file'][0]
@@ -847,6 +848,11 @@ if __name__ =='__main__':
 		lp_file.write(json.dumps(input_lookup))
 	lp_file.close()
 
+	output_lp = "output_lookup.json"
+	with open(output_lp,'w') as op_file:
+		op_file.write(json.dumps(output_lookup))
+	op_file.close()
+
 	for i in range(4):
 		if i < 3:
 			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")
@@ -861,6 +867,7 @@ if __name__ =='__main__':
 		each.put(task_file)
 		each.put(dependency_lookup)
 		each.put(input_lp)
+		each.put(output_lp)
 		each.put("governer.py")
 		
 

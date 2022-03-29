@@ -264,6 +264,13 @@ def inputfile_lookup(app_data):
 			input_lookup[each['name']] = each['input']
 	return input_lookup
 
+def output_lookup(app_data):
+	oput_lookup={}
+	for each in app_data['Application']['Vertices']:
+		if each['name']!="s" and each['name']!='end':
+			oput_lookup[each['name']] = each['output']
+	return oput_lookup
+
 
 
 

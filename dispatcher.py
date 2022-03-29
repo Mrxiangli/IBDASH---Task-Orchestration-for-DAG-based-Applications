@@ -46,7 +46,7 @@ def dispatch(directory, allocation,edge_list_scp, edge_list_ssh,task_dict, insta
 			command = "python governer.py --all {} --tk {} --ic {}".format(allocation_file,eachtask,instance_count)
 			print(command)
 			stdin,stdout,stderr=edge_list_ssh[allocation[str(eachtask)][0]].exec_command(command)
-			for line in stdout.read().splitlines():
+			for line in stderr.read().splitlines():
 				print(line)
 
 	#print(dependency_dic)
