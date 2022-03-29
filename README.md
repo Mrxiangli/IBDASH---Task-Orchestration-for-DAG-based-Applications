@@ -28,3 +28,4 @@ There are several hyper parameters that can be used to tune the simulation proce
 
 By default, the matrix application will be used for orchestration 
 
+To run the application on real EC2 instance or real devices, the public ip of the instances need to be shared with the orchestrator. This can de done by generate ssh key and share is with orchesteator
