@@ -7,7 +7,7 @@ To install anaconda through commandline, run the following command to retrieve t
 
 Then, creating a new conda enviroment 
 
-      conda create -n -ibdash python=3.7 anaconda
+      conda create -n ibdash python=3.7 anaconda
       
 Then we need to install the related packages
 
