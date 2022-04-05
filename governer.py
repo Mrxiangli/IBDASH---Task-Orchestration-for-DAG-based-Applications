@@ -6,6 +6,7 @@ import os
 import sys
 import paramiko
 from scp import SCPClient
+import errno
 
 def json_file_loader(file):
 	data = json.load(open(file))
@@ -43,9 +44,9 @@ def create_edge_server():
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	access_dict={}
-	access_dict[0]="ec2-54-221-77-125.compute-1.amazonaws.com"
-	access_dict[1]="ec2-100-24-240-119.compute-1.amazonaws.com"
-	access_dict[2]="ec2-3-239-58-192.compute-1.amazonaws.com"
+	access_dict[0]="ec2-107-23-36-58.compute-1.amazonaws.com"
+	access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
+	access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
 	access_dict[3]="128.46.73.218"
 	for i in range(4):
 		if i < 3:
@@ -67,12 +68,8 @@ if __name__ =='__main__':
 	parser.add_argument('--ic',type=int,help="instance count")
 	args = parser.parse_args()
 
+	#creating ssh connection
 	edge_list_scp, edge_list_ssh = create_edge_server()
-	#edge_list_scp[1].put("governer.py")
-	#edge_list_ssh[1].exec_command("source ~/.bashrc")
-	#sys.exit()
-
-
 
 	#need to source the bashrc file to activate the corresponding conda enviroment
 	#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("source ~/.bashrc")
@@ -86,64 +83,83 @@ if __name__ =='__main__':
 	input_lookup=json_file_loader("input_lookup.json")
 	output_lookup=json_file_loader("output_lookup.json")
 
-	#print(input_lookup)
-	#print(depend_lookup)
+	#running a check to see if all input files are available; if missing, try to retrieve from replicated service
+	for input_file in input_lookup[str(args.tk)]:
+		if input_file[1] == 0:	#non-intermediate files
+			if os.path.exists(input_file[0]):
+				pass
+			else:																				#missing file
+				raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), input_file[0])
+		else:				#intermediate files
+			file_to_be_retrieved = input_file[0] + str(instance_count) + input_file[2]
+			if os.path.exists(file_to_be_retrieved):
+				pass
+			else:		#this intermediate file is missing, go back to previous stage and fetch
+				for each_depend_task in dependency_dic[str(args.tk)]:							#find all dependency of current task
+					for each_device in allocation_dic[str(each_depend_task[0])]:				# find the devices that execute those dependent taks
+						file_suppose_to_produced = output_lookup[each_depend_task[0]]			# find the output files suppose to be produced by those dependent tasks
+						for each_file_produced in file_suppose_to_produced:						# check if the missing file is one of them
+							if each_file_produced[0] == input_file[0]:
+								try:
+									err=edge_list_scp[int(each_device[0])].get(file_to_be_retrieved)
+									if not err:
+										break
+								except:
+									pass	
 
 	#execute the main task related to this node
 	task=task_lookup(args.tk, task_dic)
 	command=execute_main_task(task, instance_count)
-	print(command)
+	#print(command)
 	p=subprocess.Popen([command],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 	out,err = p.communicate()
-	print(err)
+	#print(err)
 	if err:
-		print("task {} did not finish execution, exiting!".format(task))
+		#print("task {} did not finish execution, exiting!".format(task))
 		sys.exit()
 
 	output_from_current_tk = output_lookup[str(args.tk)]
 	for each in output_from_current_tk:
 		intermediate_file = each[0]+str(instance_count)+each[2]
-		print(intermediate_file)
-		print(each)
-		edge_list_scp[allocation_dic[str(each[3])][0]].put(intermediate_file)
+		#print(intermediate_file)
+		#print(each)
+		for each_edge in allocation_dic[str(each[3])]:
+			edge_list_scp[each_edge].put(intermediate_file)
 
 	#looking for the dependency and find the next device and task
 	next_stage_dict=next_task(args.tk,depend_lookup,input_lookup)
-	print(next_stage_dict)
+	#print(next_stage_dict)
 	#Curent task is the last task
 	if len(next_stage_dict) == 0:
-		print(input_lookup['end'])
+		#print(input_lookup['end'])
 		result_file = "predict_"+str(args.ic)+".txt"
-		edge_list_scp[3].put(result_file,"/home/jonny/Documents/Research/IBDASH_V2")
+		edge_list_scp[3].put(result_file,"/home/jonny/Documents/Research/IBDASH_V2/result")
 	#send the output from this stage to next device
 
 	for each_tk in next_stage_dict.keys():
-		#print(each_tk)
 		ed = allocation_dic[each_tk][0]
+		
+		#print(each_tk)
 		#print(next_stage_dict[each_tk])
 		# drop the input file to the designated device
-		for each_input in next_stage_dict[each_tk]:
-			print(each_input)
-			if each_input[1] == 1: #checking the second position first to see if it is a intermediate generated file
-				infile = each_input[0]+str(instance_count)+each_input[2]
-				if os.path.exists(infile):
-					edge_list_scp[ed].put(infile)
-					print("moving {} to ed : {}".format(infile,ed))
+		#for each_input in next_stage_dict[each_tk]:
+			#print(each_input)
+		#	if each_input[1] == 1: #checking the second position first to see if it is a intermediate generated file
+		#		infile = each_input[0]+str(instance_count)+each_input[2]
+		#		if os.path.exists(infile):
+					#edge_list_scp[ed].put(infile) this is an unnecessary command; removed for now
+					#print("moving {} to ed : {}".format(infile,ed))
+		
 		allocation_file = "allocation_"+str(args.ic)+".json"
-		command = "python governer.py --all {} --tk {} --ic {}".format(allocation_file,each_tk,args.ic)
-		print(command)
-		print("the above command execute on ed: {}".format(ed))
-		stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
-		for line in stderr.read().splitlines():
+		command = "nohup python governer.py --all {} --tk {} --ic {}".format(allocation_file,each_tk,args.ic)
+		
+		#print(command)
+		#print("the above command execute on ed: {}".format(ed))
+		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
+		
+		edge_list_ssh[ed].exec_command(command)
+		for line in stdout.read().splitlines():
 			print(line)
-		# start the execution 
-
-
-	#print(next_stage_dict)
-
-
-
-	#print(task)
-	# 
+ 
 	
 	
