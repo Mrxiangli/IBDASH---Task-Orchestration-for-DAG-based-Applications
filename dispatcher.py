@@ -37,17 +37,22 @@ def dispatch(directory, allocation,edge_list_scp, edge_list_ssh,task_dict, insta
 		for each_file in inputfile_dic[str(each)]:
 			if each_file[1]==0:
 				input_path = os.path.join(directory,each_file[0])
-				edge_list_scp[allocation[each][0]].put(input_path)
+				for each_edge in allocation[str(each)]:
+					edge_list_scp[each_edge].put(input_path)
 				#### need to figure out why vectors not passed
 
 	for eachtask in dependency_dic.keys():
 		if dependency_dic[eachtask]==[None]:
 			allocation_file = "allocation_"+str(instance_count)+".json"
-			command = "python governer.py --all {} --tk {} --ic {}".format(allocation_file,eachtask,instance_count)
+			command = "nohup python governer.py --all {} --tk {} --ic {}".format(allocation_file,eachtask,instance_count)
 			print(command)
-			stdin,stdout,stderr=edge_list_ssh[allocation[str(eachtask)][0]].exec_command(command)
-			for line in stderr.read().splitlines():
-				print(line)
+			#stdin,stdout,stderr=edge_list_ssh[allocation[str(eachtask)][0]].exec_command(command)
+			for each_edge in allocation[str(eachtask)]:
+				stdin,stdout,stderr=edge_list_ssh[each_edge].exec_command(command)
+				#edge_list_ssh[each_edge].exec_command(command)
+				print("edge device {} executing command {}".format(each_edge,command))
+				for line in stderr.read().splitlines():
+					print(line)
 
 	#print(dependency_dic)
 	#print(allocation)

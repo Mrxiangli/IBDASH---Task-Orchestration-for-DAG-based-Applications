@@ -14,7 +14,7 @@ import random
 import json
 import subprocess
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp
 from helpers import plot as dagplot
 from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
@@ -178,7 +178,10 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
+			allocation={"0": [0], "1": [1,2], "2": [0]}
 			print(allocation)
+			print("instance cout start :{}".format(instance_count))
+			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
@@ -200,7 +203,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			load_ed[i] = np.add(load_ed[i],ED_tasks[j][i])
 	return time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av, load_ed, dispatcher_dic
 
-def run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk):
+def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
 
 	########## Petrel ############
 	# a dictionary that used to track the available models on each edge device	
@@ -221,6 +224,7 @@ def run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 	k=0
 	i=0
 	rp=0
+	instance_count = 0
 	service_time_petrel=[]
 	for time in clock_time:
 		time = round(time,2)
@@ -230,6 +234,8 @@ def run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 			i=0
 			start_time = timer.time()
 			petrel_pf = 1
+			instance_count += 1
+			allocation={}
 			tmp_pf_dic = {}						# temporary dictionary used to trakc probability of failure
 			for stage in vert_stage:			# go through each stage in the dag
 				longest_task_time=0
@@ -255,7 +261,7 @@ def run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 						if predict_time < t_pred:		
 							t_pred = predict_time
 							ED_pred = j
-
+					allocation[each_task]=[ED_pred]
 					parent_all_success = 1
 					#Calculating the probability of current placement
 					if dependency_dic[task] == [None]:
@@ -295,6 +301,8 @@ def run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 			end_time = timer.time()
 			schedule_time_petrel += end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			get_times_stamp(instance_count)
+			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_petrel.append(i/1000)
 			k=k+1
 			pf_petrel_av.append(tmp_pf_dic[task_types-1])
@@ -313,7 +321,7 @@ def run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 
 	return time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av, load_ed_petrel
 
-def run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk):	
+def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):	
 	# a dictionary that used to track the available models on each edge device	
 	model_info=dict()
 	for i in range(num_edge):
@@ -332,6 +340,8 @@ def run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,
 	k=0
 	i=0
 	rp=0
+	instance_count = 0
+	dispatcher_dic={}
 	schedule_time_lavea = 0
 	service_time_lavea=[]
 	for time in clock_time:
@@ -342,6 +352,8 @@ def run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,
 			i=0
 			start_time = timer.time()
 			lavea_pf = 1
+			instance_count += 1
+			allocation={}
 			tmp_pf_dic = {}						# temporary dictionary used to trakc probability of failure
 			for stage in vert_stage:			# go through each stage in the dag
 				longest_task_time=0
@@ -357,7 +369,7 @@ def run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,
 						if num_task_on_ed < num_task_min:
 							num_task_min = num_task_on_ed
 							ED_pred = j
-
+					allocation[each_task]=[ED_pred]
 					model_upload_t = 0
 					task=int(each_task)
 					w=ED_m[ED_pred][task*task_types:task*task_types+task_types]
@@ -414,6 +426,8 @@ def run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,
 			end_time = timer.time()
 			schedule_time_lavea +=end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			get_times_stamp(instance_count)
+			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_lavea.append(i/1000)
 			k=k+1
 			pf_lavea_av.append(tmp_pf_dic[task_types-1])
@@ -432,7 +446,7 @@ def run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,
 	return time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av, load_ed_lavea
 
 
-def run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk):
+def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
 	########## Round Robin ############
 
 	model_info=dict()
@@ -447,6 +461,8 @@ def run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependenc
 	i=0
 	rp=0
 	rr_ed=1
+	instance_count = 0
+	dispatcher_dic={}
 	service_time_rr=[]
 	for time in clock_time:
 		time = round(time,2)
@@ -456,6 +472,8 @@ def run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependenc
 			i=0
 			start_time = timer.time()
 			rr_pf = 1
+			instance_count += 1
+			allocation={}
 			tmp_pf_dic = {}						# temporary dictionary used to trakc probability of failure
 			for stage in vert_stage:			# go through each stage in the dag
 				longest_task_time=0
@@ -480,7 +498,7 @@ def run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependenc
 
 					predict_time = predict_time + model_upload_t
 					t_pred = predict_time
-
+					allocation[each_task]=[ED_pred]
 					parent_all_success = 1
 					#Calculating the probability of current placement
 					if dependency_dic[task] == [None]:
@@ -519,6 +537,8 @@ def run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependenc
 			end_time = timer.time()
 			schedule_time_rr += end_time- start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			get_times_stamp(instance_count)
+			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_rr.append(i/1000)
 			k=k+1
 			pf_rr_av.append(tmp_pf_dic[task_types-1])
@@ -536,7 +556,7 @@ def run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependenc
 			load_ed_rr[i] = np.add(load_ed_rr[i],ED_tasks[j][i])
 	return time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av, load_ed_rr
 
-def run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk):
+def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
 	########## Random ############
 
 	model_info=dict()
@@ -550,6 +570,8 @@ def run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 	k=0
 	i=0
 	rp=0
+	instance_count = 0
+	dispatcher_dic={}
 	service_time_rd=[]
 	for time in clock_time:
 		time = round(time,2)
@@ -559,6 +581,8 @@ def run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 			i=0
 			start_time = timer.time()
 			rd_pf = 1
+			instance_count += 1
+			allocation={}
 			tmp_pf_dic = {}						# temporary dictionary used to trakc probability of failure
 			for stage in vert_stage:			# go through each stage in the dag
 				longest_task_time=0
@@ -579,7 +603,7 @@ def run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 
 					predict_time = predict_time + model_upload_t
 					t_pred = predict_time
-
+					allocation[each_task]=[ED_pred]
 					parent_all_success = 1
 					#Calculating the probability of current placement
 					if dependency_dic[task] == [None]:
@@ -617,6 +641,8 @@ def run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 			end_time = timer.time()
 			schedule_time_rd = end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			get_times_stamp(instance_count)
+			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_rd.append(i/1000)
 			k=k+1
 			pf_rd_av.append(tmp_pf_dic[task_types-1])
@@ -634,7 +660,7 @@ def run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic
 			load_ed_rd[i] = np.add(load_ed_rd[i],ED_tasks[j][i])
 	return time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av, load_ed_rd
 
-def run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,ed_cpu_regression,ed_latency_regression):
+def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic,ed_cpu_regression,ed_latency_regression):
 	# ########## LATs ############
 
 	model_info=dict()
@@ -650,6 +676,7 @@ def run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,p
 	k=0
 	i=0
 	rp=0
+	instance_count = 0
 	poly = PolynomialFeatures(degree=3)
 	service_time_lats=[]
 	for time in clock_time:
@@ -660,6 +687,8 @@ def run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,p
 			i=0
 			start_time = timer.time()
 			lats_pf = 1
+			instance_count += 1
+			allocation={}
 			tmp_pf_dic = {}						# temporary dictionary used to trakc probability of failure
 			for stage in vert_stage:			# go through each stage in the dag
 				longest_task_time=0
@@ -716,6 +745,7 @@ def run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,p
 						if predict_time < t_pred:
 							t_pred = predict_time
 							ED_pred = j
+					allocation[each_task]=[ED_pred]
 					parent_all_success = 1
 					#Calculating the probability of current placement
 					if dependency_dic[task] == [None]:
@@ -753,6 +783,8 @@ def run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,p
 			end_time = timer.time()
 			schedule_time_lats = end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			get_times_stamp(instance_count)
+			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
 			service_time_lats.append(i/1000)
 			#print(service_time_lats)
 			k=k+1
@@ -812,9 +844,9 @@ if __name__ =='__main__':
 	# The following parameters can be used to tune the simulation
 	random.seed(0)
 	ntbd = 600						#network bandwidth
-	app_inst_time = 1500			#the period of time that application instances might arrive
-	sim_time = 20000				#simulation period
-	num_arrivals = 2				#number of application instances arrived during app_ins_time	
+	app_inst_time = 150				#the period of time that application instances might arrive
+	sim_time = 200000				#simulation period
+	num_arrivals = 1				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
@@ -823,9 +855,9 @@ if __name__ =='__main__':
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	access_dict={}
-	access_dict[0]="ec2-54-221-77-125.compute-1.amazonaws.com"
-	access_dict[1]="ec2-100-24-240-119.compute-1.amazonaws.com"
-	access_dict[2]="ec2-3-239-58-192.compute-1.amazonaws.com"
+	access_dict[0]="ec2-107-23-36-58.compute-1.amazonaws.com"
+	access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
+	access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
 	access_dict[3]="128.46.73.218"
 
 	dependency_file = "dependency_file.json"
@@ -908,7 +940,7 @@ if __name__ =='__main__':
 		ED_c = np.array(pd.read_excel(EDmc_file,engine="openpyxl",sheet_name="edc",skiprows=0, nrows= num_edge))
 
 		#probabily of failure for each edge device (used expotential distribution for simulation)
-		lam2=[0.0000015, 0.00011, 0.00015, 0.000024, 0.000009, 0.0000032, 0.000031, 0.0000001,0.0000015,0.0000015]   	#mix
+		lam2=[0.000000015, 0.0000011, 0.000000015, 0.000024, 0.000009, 0.0000032, 0.000031, 0.0000001,0.0000015,0.0000015]   	#mix
 		#lam2=[0.00015, 0.00011, 0.00015, 0.00024, 0.0009, 0.000032, 0.0001, 0.0009]   									#PED
 		#lam2=[0.000015, 0.000011, 0.000015, 0.000011, 0.000018, 0.000012, 0.00001, 0.00002]   							#CED
 
@@ -940,17 +972,12 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 
-		time_file = open("time.txt","a")
-		p=subprocess.Popen(["date +%s%N"],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
-		out,err = p.communicate()
-		time_file.write(str(out))
-		time_file.close()
 		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
-		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		#time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk)
-		#time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,ed_cpu_regression,ed_latency_regression)
+		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
+		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
+		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
+		#time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
+		#time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic,ed_cpu_regression,ed_latency_regression)
 
 """
 		fig2, orch = plt.subplots(3,2,sharex=True)

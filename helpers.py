@@ -10,6 +10,11 @@ from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 import os
 import pandas as pd
+import configparser
+import json
+import subprocess
+import os
+import sys
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -271,7 +276,14 @@ def output_lookup(app_data):
 			oput_lookup[each['name']] = each['output']
 	return oput_lookup
 
-
+def get_times_stamp(app_instance):
+	time_file = open("time.txt","a")
+	p=subprocess.Popen(["date +%s%N"],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
+	out,err = p.communicate()
+	time_file.write("instance {} start:".format(app_instance))
+	time_file.write(out.decode("utf-8"))
+	#print("writing instance {} start".format)
+	time_file.close()
 
 
 
