@@ -7,7 +7,7 @@ To install anaconda through commandline, run the following command to retrieve t
 
 Then, creating a new conda enviroment 
 
-      conda create -n -ibdash python=3.7 anaconda
+      conda create -n ibdash python=3.7 anaconda
       
 Then we need to install the related packages
 
@@ -28,3 +28,4 @@ There are several hyper parameters that can be used to tune the simulation proce
 
 By default, the matrix application will be used for orchestration 
 
+To run the application on real EC2 instance or real devices, the public ip of the instances need to be shared with the orchestrator. This can de done by generate ssh key and share is with orchesteator
