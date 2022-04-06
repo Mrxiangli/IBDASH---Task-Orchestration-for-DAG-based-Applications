@@ -14,7 +14,7 @@ import random
 import json
 import subprocess
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test
 from helpers import plot as dagplot
 from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
@@ -839,7 +839,6 @@ if __name__ =='__main__':
 	for task in app_data['Application']['Vertices']:
 		task_file_dic[task['name']]=task['file'][0]
 
-
 	EDmc_file=os.path.join(app_path,args.mc) # this file has the (m,c) value pairs and should be updated dynamically later on
 	# The following parameters can be used to tune the simulation
 	random.seed(0)
@@ -854,11 +853,20 @@ if __name__ =='__main__':
 
 	edge_list_scp=[]
 	edge_list_ssh=[]
+	unavailable_edge = []
 	access_dict={}
 	access_dict[0]="ec2-107-23-36-58.compute-1.amazonaws.com"
 	access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
 	access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
 	access_dict[3]="128.46.73.218"
+
+	for i in range(num_edge_max):
+		availibility = ping_test(access_dict[i])
+		if availibility == -1:
+			access_dict.pop(i)
+			unavailable_edge.append(i)
+
+	sys.exit()
 
 	dependency_file = "dependency_file.json"
 	with open(dependency_file,'w') as depend_file:

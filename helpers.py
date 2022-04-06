@@ -18,6 +18,8 @@ import sys
 
 pp = pprint.PrettyPrinter(indent=4)
 
+PING_PACKET_SIZE=64
+
 
 # this function insert and edge device to the ED_m and ED_c matrix
 def insert_edge_device(ED_m, ED_c, num_edge,new_edm_info, new_edc_info, ed_dict, ed_info):
@@ -284,6 +286,18 @@ def get_times_stamp(app_instance):
 	time_file.write(out.decode("utf-8"))
 	#print("writing instance {} start".format)
 	time_file.close()
+
+def ping_test(ed):
+	command = "fping -c1 -t150 {}".format(ed)
+	p=subprocess.Popen([command],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
+	out,err = p.communicate()
+	out = out.decode("utf-8")
+	err = err.decode("utf-8")
+	loss = err.split(":")[1].split(",")[0].split("/")[-1].split("%")[0]
+	if int(loss) > 5:
+		return -1
+	else:
+		return 1
 
 
 
