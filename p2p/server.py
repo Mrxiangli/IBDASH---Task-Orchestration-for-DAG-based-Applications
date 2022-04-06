@@ -1,8 +1,9 @@
 import socket
 import tqdm
 import os
+import time
 # device's IP address
-SERVER_HOST = "128.46.73.218"
+SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5001
 # receive 4096 bytes each time
 BUFFER_SIZE = 4096
@@ -22,8 +23,15 @@ s.listen(5)
 print(f"[*] Listening as {SERVER_HOST}:{SERVER_PORT}")
 
 # accept connection if there is any
-client_socket, address = s.accept() 
+while True:
+	client_socket, address = s.accept() 
+	print(client_socket)
+	print(address)
+	time.sleep(10)
+	received = client_socket.recv(BUFFER_SIZE).decode()
+	print(received)
 # if below code is executed, that means the sender is connected
+"""
 print(f"[+] {address} is connected.")
 
 # receive the file infos
@@ -55,3 +63,4 @@ with open(filename, "wb") as f:
 client_socket.close()
 # close the server socket
 s.close()
+"""
