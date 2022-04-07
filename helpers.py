@@ -15,6 +15,8 @@ import json
 import subprocess
 import os
 import sys
+import socket
+import tqdm
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -293,11 +295,50 @@ def ping_test(ed):
 	out,err = p.communicate()
 	out = out.decode("utf-8")
 	err = err.decode("utf-8")
-	loss = err.split(":")[1].split(",")[0].split("/")[-1].split("%")[0]
-	if int(loss) > 5:
-		return -1
-	else:
-		return 1
+	#loss = err.split(":")[1].split(",")[0].split("/")[-1].split("%")[0]
+	#if int(loss) > 5:
+	#	return -1
+	#else:
+	#	return 1
+
+
+def send_files(host, port, filename):
+	SEPARATOR = "<SEPARATOR>"
+	BUFFER_SIZE = 4096 # send 4096 bytes each time step
+
+	# the ip address or hostname of the server, the receiver
+	#host = "10.186.126.203"
+	# the port, let's use 5001
+	#port = 5001
+	# the name of file we want to send, make sure it exists
+	#filename = "test.txt"
+	# get the file size
+	filesize = os.path.getsize(filename)
+
+	s = socket.socket()
+
+	print(f"[+] Connecting to {host}:{port}")
+	s.connect((host, port))
+	print(s)
+	print("[+] Connected.")
+
+	s.send(f"{filename}{SEPARATOR}{filesize}".encode())
+
+	progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
+	with open(filename, "rb") as f:
+	    while True:
+	        # read the bytes from the file
+	        bytes_read = f.read(BUFFER_SIZE)
+	        if not bytes_read:
+	            # file transmitting is done
+	            break
+	        # we use sendall to assure transimission in 
+	        # busy networks
+	        s.sendall(bytes_read)
+	        # update the progress bar
+	        progress.update(len(bytes_read))
+	# close the socket
+	s.close()
 
 
 
