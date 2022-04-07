@@ -14,7 +14,7 @@ import random
 import json
 import subprocess
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files
 from helpers import plot as dagplot
 from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
@@ -26,7 +26,7 @@ from pathlib import Path
 pp = pprint.PrettyPrinter(indent=4)
 
 
-def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
+def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic, access_dict):
 	######### IBOT-PI ######### 
 	
 	pf_ibdash_av=[]
@@ -182,7 +182,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			print(allocation)
 			print("instance cout start :{}".format(instance_count))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, access_dict)
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
@@ -855,18 +855,18 @@ if __name__ =='__main__':
 	edge_list_ssh=[]
 	unavailable_edge = []
 	access_dict={}
-	access_dict[0]="ec2-107-23-36-58.compute-1.amazonaws.com"
-	access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
-	access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
-	access_dict[3]="128.46.73.218"
+	access_dict[0]="128.46.32.175"
+	#access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
+	#access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
+	#access_dict[3]="128.46.73.218"
 
-	for i in range(num_edge_max):
-		availibility = ping_test(access_dict[i])
-		if availibility == -1:
-			access_dict.pop(i)
-			unavailable_edge.append(i)
+	#for i in range(num_edge_max):
+#		availibility = ping_test(access_dict[i])
+#		if availibility == -1:
+#			access_dict.pop(i)
+#			unavailable_edge.append(i)
 
-	sys.exit()
+#	sys.exit()
 
 	dependency_file = "dependency_file.json"
 	with open(dependency_file,'w') as depend_file:
@@ -893,24 +893,30 @@ if __name__ =='__main__':
 		op_file.write(json.dumps(output_lookup))
 	op_file.close()
 
-	for i in range(4):
-		if i < 3:
-			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")
-			client_ssh.exec_command("source ~/.bashrc")
-		else:
-			client_scp, client_ssh = createSSHClient(access_dict[i],"id_rsa.pub" )
-		edge_list_scp.append(client_scp)
-		edge_list_ssh.append(client_ssh)
+#	for i in range(4):
+#		if i < 3:
+#			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")#
+#			client_ssh.exec_command("source ~/.bashrc")
+#		else:
+#			client_scp, client_ssh = createSSHClient(access_dict[i],"id_rsa.pub" )
+#		edge_list_scp.append(client_scp)
+#		edge_list_ssh.append(client_ssh)
 
-	for each in edge_list_scp:
-		each.put(dependency_file)
-		each.put(task_file)
-		each.put(dependency_lookup)
-		each.put(input_lp)
-		each.put(output_lp)
-		each.put("governer.py")
+	for each in access_dict.keys():
+		print(access_dict[each])
+		send_files(access_dict[each],5001,dependency_file)
+		send_files(access_dict[each],5001,task_file)
+		send_files(access_dict[each],5001,dependency_lookup)
+		send_files(access_dict[each],5001,input_lp)
+		send_files(access_dict[each],5001,output_lp)
+		#each.put(dependency_file)
+		#each.put(task_file)
+		#each.put(dependency_lookup)
+		#each.put(input_lp)
+		#each.put(output_lp)
+		#each.put("governer.py")
 		
-
+	sys.exit()
 
 	#generate the random task arrival time 
 	task_time = np.array(sorted(random.sample(range(1,app_inst_time),num_arrivals)))
@@ -980,7 +986,7 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 
-		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
+		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, access_dict)
 		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
 		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
 		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)

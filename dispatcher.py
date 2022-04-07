@@ -3,6 +3,7 @@ from scp import SCPClient
 import os
 import json
 import sys
+from helpers import send_files
 
 
 #creat EC2 client for dispatching
@@ -17,7 +18,7 @@ def createSSHClient(server, password):
     return client_scp, client
 
 #The dispatch function should be called when one application instance is orchestrated
-def dispatch(directory, allocation,edge_list_scp, edge_list_ssh,task_dict, instance_count, dependency_dic,inputfile_dic):
+def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inputfile_dic, access_dict):
 	allocation_file = os.path.join(directory,"allocation_"+str(instance_count)+".json")
 	with open(allocation_file,'w') as allocate:
 		allocate.write(json.dumps(allocation))
@@ -28,17 +29,18 @@ def dispatch(directory, allocation,edge_list_scp, edge_list_ssh,task_dict, insta
 		#des_file = task_dict[each_task].split('.')[0]+"_"+str(instance_count)+".py"
 		#llocation_file_path = os.path
 		for each_device in allocation[each_task]:
-			#print(file_path,des_file)
-			#edge_list_scp[each_device].put(file_path, des_file)
-			edge_list_scp[each_device].put(file_path)
-			edge_list_scp[each_device].put(allocation_file)
+			send_files(access_dict[each_device],5001,file_path)
+			send_files(access_dict[each_device],5001,allocation_file)
+			#edge_list_scp[each_device].put(file_path)
+			#edge_list_scp[each_device].put(allocation_file)
 
 	for each in inputfile_dic:
 		for each_file in inputfile_dic[str(each)]:
 			if each_file[1]==0:
 				input_path = os.path.join(directory,each_file[0])
 				for each_edge in allocation[str(each)]:
-					edge_list_scp[each_edge].put(input_path)
+					send_file(access_dict[each_edge],5001,input_path)
+					#edge_list_scp[each_edge].put(input_path)
 				#### need to figure out why vectors not passed
 
 	for eachtask in dependency_dic.keys():
