@@ -301,11 +301,28 @@ def ping_test(ed):
 	#else:
 	#	return 1
 
+def socket_connections(host,port):
 
-def send_files(host, port, filename):
+	s = socket.socket()
+
+	print(f"[+] Connecting to {host}:{port}")
+	s.connect((host, port))
+	print(s)
+	print("[+] Connected.")
+	return s
+
+
+def send_files(host,port,filename):
 	SEPARATOR = "<SEPARATOR>"
 	BUFFER_SIZE = 4096 # send 4096 bytes each time step
+	NAME_SIZE = 256
 
+	s = socket.socket()
+
+	print(f"[+] Connecting to {host}:{port}")
+	s.connect((host, port))
+	print(s)
+	print("[+] Connected.")
 	# the ip address or hostname of the server, the receiver
 	#host = "10.186.126.203"
 	# the port, let's use 5001
@@ -314,15 +331,11 @@ def send_files(host, port, filename):
 	#filename = "test.txt"
 	# get the file size
 	filesize = os.path.getsize(filename)
-
-	s = socket.socket()
-
-	print(f"[+] Connecting to {host}:{port}")
-	s.connect((host, port))
-	print(s)
-	print("[+] Connected.")
-
-	s.send(f"{filename}{SEPARATOR}{filesize}".encode())
+	print(filename)
+	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
+	print(len(name))
+	s.send("F".encode())
+	s.send(name)
 
 	progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
 	with open(filename, "rb") as f:
