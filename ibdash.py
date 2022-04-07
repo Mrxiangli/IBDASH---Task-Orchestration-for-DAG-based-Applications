@@ -13,8 +13,9 @@ import math
 import random
 import json
 import subprocess
+import time
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files, socket_connections
 from helpers import plot as dagplot
 from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
@@ -101,8 +102,10 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 						fail_prev_queue.append([j,predict_time])
 					fail_prev_queue=sorted(fail_prev_queue,key=lambda x: x[1])
 					fail_prev_norm_queue=[]
+					print(fail_prev_queue)
+					print(num_rep)
 					for serv_time in fail_prev_queue:
-						norm_ele = [serv_time[0],serv_time[1]/fail_prev_queue[num_rep-1][1]]
+						norm_ele = [serv_time[0],serv_time[1]/fail_prev_queue[-1][1]] # this line has been changed!!! [num_rep-1] -> -1
 						fail_prev_norm_queue.append(norm_ele)
 
 					ED_pred, t_pred=fail_prev_queue.pop(0)
@@ -178,7 +181,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
-			allocation={"0": [0], "1": [1,2], "2": [0]}
+			#allocation={"0": [0], "1": [1,2], "2": [0]}
 			print(allocation)
 			print("instance cout start :{}".format(instance_count))
 			get_times_stamp(instance_count)
@@ -849,13 +852,20 @@ if __name__ =='__main__':
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 3					#number of edge devices in DAG
+	num_edge_max = 1					#number of edge devices in DAG
 
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	unavailable_edge = []
 	access_dict={}
 	access_dict[0]="128.46.32.175"
+	#socket_list = []
+
+	#for i in range(num_edge_max):
+
+	#	connection = socket_connections(access_dict[i],5001)
+	#	socket_list.append(connection)
+
 	#access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
 	#access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
 	#access_dict[3]="128.46.73.218"
@@ -903,12 +913,11 @@ if __name__ =='__main__':
 #		edge_list_ssh.append(client_ssh)
 
 	for each in access_dict.keys():
-		print(access_dict[each])
-		send_files(access_dict[each],5001,dependency_file)
+		#print(socket_list[each])
 		send_files(access_dict[each],5001,task_file)
 		send_files(access_dict[each],5001,dependency_lookup)
-		send_files(access_dict[each],5001,input_lp)
-		send_files(access_dict[each],5001,output_lp)
+		send_files(access_dict[each],5001, input_lp)
+		send_files(access_dict[each],5001, output_lp)
 		#each.put(dependency_file)
 		#each.put(task_file)
 		#each.put(dependency_lookup)
@@ -916,7 +925,6 @@ if __name__ =='__main__':
 		#each.put(output_lp)
 		#each.put("governer.py")
 		
-	sys.exit()
 
 	#generate the random task arrival time 
 	task_time = np.array(sorted(random.sample(range(1,app_inst_time),num_arrivals)))
