@@ -12,7 +12,7 @@ import tqdm
 import os
 from threading import Thread
 from queue import Queue
-
+import time
 
 def json_file_loader(file):
 	data = json.load(open(file))
@@ -50,32 +50,32 @@ def create_edge_server():
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	access_dict={}
-	access_dict[0]="ec2-107-23-36-58.compute-1.amazonaws.com"
-	access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
-	access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
-	access_dict[3]="128.46.73.218"
-	for i in range(4):
-		if i < 3:
-			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")
-		else:
-			client_scp, client_ssh = createSSHClient(access_dict[i], password="id_rsa.pub")
-		edge_list_scp.append(client_scp)
-		edge_list_ssh.append(client_ssh)
+	access_dict[0]="128.46.32.175"
+	return access_dict
+	#access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
+	#access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
+	#access_dict[3]="128.46.73.218"
+	#for i in range(4):
+	#	if i < 3:
+#			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")
+#		else:
+#			client_scp, client_ssh = createSSHClient(access_dict[i], password="id_rsa.pub")
+#		edge_list_scp.append(client_scp)
+#		edge_list_ssh.append(client_ssh)
 
-	return edge_list_scp,edge_list_ssh
+#	return edge_list_scp,edge_list_ssh
 
-def listening_thread(q):
-
+def connection_creation_thread(connection_queue):
+	print("gggg")
 	# device's IP address
 	SERVER_HOST = "0.0.0.0"
 	SERVER_PORT = 5001
 	# receive 4096 bytes each time
-	BUFFER_SIZE = 4096
 	SEPARATOR = "<SEPARATOR>"
-
 	# create the server socket
 	# TCP socket
 	s = socket.socket()
+	s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
 	# bind the socket to our local address
 	s.bind((SERVER_HOST, SERVER_PORT))
@@ -83,68 +83,137 @@ def listening_thread(q):
 	# enabling our server to accept connections
 	# 5 here is the number of unaccepted connections that
 	# the system will allow before refusing new connections
-	s.listen(5)
-	print(f"[*] Listening as {SERVER_HOST}:{SERVER_PORT}")
+	s.listen(100)
+	while True:
+		client_socket, address = s.accept() 
+		print("waiting for connection")
+		connection_queue.put([client_socket,address])
+		print(f"size of queue: {connection_queue.qsize()}")
+
+def spawn_listening_thread(connection_queue, command_queue):
+	print("sssss")
+	while True:
+		#print(f"size of queue: {connection_queue.qsize()}")
+		while connection_queue.qsize() != 0:
+			print("waiting for connection queue to be filled")
+			client_socket,address = connection_queue.get()
+			Thread(target = connection_listening_thread, args=(client_socket,address,command_queue,)).start() #for each socket creating a listening thread
+
+def spawn_command_thread(command_queue):
+	while True:
+		while command_queue.empty is False:
+			command = command_queue.get()
+			Thread(target = processing_thread, args=(command)).start() #for each
+
+def connection_listening_thread(client_socket,address, command_queue):
+	BUFFER_SIZE = 65536
+	NAME_SIZE = 256
+	SEPARATOR = "<SEPARATOR>"
+
+	print(f"socket at {address} is being listened")
+	
+	#print(f"[*] Listening as {SERVER_HOST}:{SERVER_PORT}")
+
+	# if below code is executed, that means the sender is connected
+	#print(f"[+] {address} is connected.")
+	# for each connection
 
 	while True:
-	# accept connection if there is any
-		client_socket, address = s.accept()
-		q.put(client_socket)
-		print(q.qsize())
-	""" 
-	# if below code is executed, that means the sender is connected
-	print(f"[+] {address} is connected.")
+		msg_type = client_socket.recv(1).decode()
+		if msg_type != "F" and msg_type !="C":
+			print(f"msg: {msg_type}")
+			print(f"socket {client_socket} out of sync")
+		if msg_type == 'F':
+			start = time.time()
+			received = client_socket.recv(NAME_SIZE).decode()
+			print(received)
+			filename, filesize, space = received.split(SEPARATOR)
+			# remove absolute path if there is
+			filename = os.path.basename(filename)
+			# convert to integer
+			filesize = int(filesize)
+			
+			# start receiving the file from the socket
+			# and writing to the file stream
+			#progress = tqdm.tqdm(range(filesize), f"Receiving {filename}", unit="B", unit_scale=True, unit_divisor=1024)
+			received_size = 0
+			count = 0
+			bytes_read = b''
+			with open(filename, "wb") as f:
+				#bytes_read = client_socket.recv(filesize)
+				#print(len(bytes_read.decode()))
+				#print(len(bytes_read))
+				counter = 0
+				while (filesize - received_size) > BUFFER_SIZE:
+					bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
+					bytes_read+=bytes_read_chunk
+					received_size += len(bytes_read_chunk.decode())
+					counter+=1
+				residue = filesize - received_size
 
-	# receive the file infos
-	# receive using client socket, not server socket
-	received = client_socket.recv(BUFFER_SIZE).decode()
-	filename, filesize = received.split(SEPARATOR)
-	# remove absolute path if there is
-	filename = os.path.basename(filename)
-	# convert to integer
-	filesize = int(filesize)
+				while residue > 0:
+					bytes_read_chunk = client_socket.recv(residue)
+					bytes_read += bytes_read_chunk
+					received_size += len(bytes_read_chunk.decode())
+					if len(bytes_read.decode()) - residue == 0:
+						break
+					else:
+						residue -= len(bytes_read_chunk.decode())
 
-	# start receiving the file from the socket
-	# and writing to the file stream
-	progress = tqdm.tqdm(range(filesize), f"Receiving {filename}", unit="B", unit_scale=True, unit_divisor=1024)
-	with open(filename, "wb") as f:
-	    while True:
-	        # read 1024 bytes from the socket (receive)
-	        bytes_read = client_socket.recv(BUFFER_SIZE)
-	        if not bytes_read:    
-	            # nothing is received
-	            # file transmitting is done
-	            break
-	        # write to the file the bytes we just received
-	        f.write(bytes_read)
-	        # update the progress bar
-	        progress.update(len(bytes_read))
+				f.write(bytes_read)
+				end = time.time()
+				print(f"time: {end-start}")
+				if received_size == filesize:
+					bytes_read = client_socket.recv(4)
+					if bytes_read.decode() != "/EOF":
+						print(f" error transmitting {filename}")
 
-	# close the client socket
-	#client_socket.close()
+		if msg_type == "C":
+			command = client_socket.recv(BUFFER_SIZE).decode()
+			command_queue.put(command)
+		# close the client socket
+		#client_socket.close()
 	# close the server socket
-	#s.close()
-	"""
+	s.close()
 
 
 #Running this on each edge
 if __name__ =='__main__':
 	connection_q = Queue()
+	command_q = Queue()
 	try:
-		Thread(target = listening_thread, args=(connection_q,)).start()
+		print("1")
+		Thread(target = connection_creation_thread, args = (connection_q,)).start()	# constantly colleccting all incoming connections and put them in a connection q
+		print("2")
+		Thread(target = spawn_listening_thread, args=(connection_q,command_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
+		print("3")
+		Thread(target = spawn_command_thread, args = (command_q,)).start() # reading the command from the queue an spawn thread to execue the command
 	except:
 		print("ERROR: unable to start thread")
-	while True:
-		pass
+
+
+def processing_thread(command):
+	access_dict = json_file_loader("edge_list.json")
+	dependency_dic=json_file_loader("dependency_file.json")
+	task_dic=json_file_loader("task_file.json")
+	depend_lookup=json_file_loader("depend_lookup.json")
+	input_lookup=json_file_loader("input_lookup.json")
+	output_lookup=json_file_loader("output_lookup.json")
+	print(f"{command} thread is created")
+	print(command)
+	command_split=command.split(" ")
+	print(command_split)
+	sys.exit()
 	# Instantiate the parser
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--all', type=str, nargs="?",help='allocation json file')
-	parser.add_argument('--tk', type=int, help="the task that suppose to be executed in the process")
-	parser.add_argument('--ic',type=int,help="instance count")
-	args = parser.parse_args()
+	#parser = argparse.ArgumentParser()
+	#parser.add_argument('--all', type=str, nargs="?",help='allocation json file')
+	#parser.add_argument('--tk', type=int, help="the task that suppose to be executed in the process")
+	#parser.add_argument('--ic',type=int,help="instance count")
+	#args = parser.parse_args()
 
 	#creating ssh connection
-	edge_list_scp, edge_list_ssh = create_edge_server()
+	#edge_list_scp, edge_list_ssh = create_edge_server()
+	
 
 	#need to source the bashrc file to activate the corresponding conda enviroment
 	#stdin,stdout,stderr=edge_list_ssh[ed].exec_command("source ~/.bashrc")
@@ -152,11 +221,7 @@ if __name__ =='__main__':
 	# loading all the json files to get the status of the allocation
 	instance_count=args.all.split('.')[0].split('_')[1]
 	allocation_dic=json_file_loader(args.all)
-	dependency_dic=json_file_loader("dependency_file.json")
-	task_dic=json_file_loader("task_file.json")
-	depend_lookup=json_file_loader("depend_lookup.json")
-	input_lookup=json_file_loader("input_lookup.json")
-	output_lookup=json_file_loader("output_lookup.json")
+	
 
 	#running a check to see if all input files are available; if missing, try to retrieve from replicated service
 	for input_file in input_lookup[str(args.tk)]:

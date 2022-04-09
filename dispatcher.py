@@ -3,7 +3,8 @@ from scp import SCPClient
 import os
 import json
 import sys
-from helpers import send_files
+from helpers import send_files, send_command
+import pdb
 
 
 #creat EC2 client for dispatching
@@ -18,7 +19,7 @@ def createSSHClient(server, password):
     return client_scp, client
 
 #The dispatch function should be called when one application instance is orchestrated
-def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inputfile_dic, access_dict):
+def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inputfile_dic, socket_list):
 	allocation_file = os.path.join(directory,"allocation_"+str(instance_count)+".json")
 	with open(allocation_file,'w') as allocate:
 		allocate.write(json.dumps(allocation))
@@ -29,17 +30,21 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 		#des_file = task_dict[each_task].split('.')[0]+"_"+str(instance_count)+".py"
 		#llocation_file_path = os.path
 		for each_device in allocation[each_task]:
-			send_files(access_dict[each_device],5001,file_path)
-			send_files(access_dict[each_device],5001,allocation_file)
+			send_files(socket_list[each_device],file_path)
+			send_files(socket_list[each_device],allocation_file)
 			#edge_list_scp[each_device].put(file_path)
 			#edge_list_scp[each_device].put(allocation_file)
+			pass
 
 	for each in inputfile_dic:
 		for each_file in inputfile_dic[str(each)]:
 			if each_file[1]==0:
 				input_path = os.path.join(directory,each_file[0])
 				for each_edge in allocation[str(each)]:
-					send_file(access_dict[each_edge],5001,input_path)
+					pass
+					#print("edge connected : {}".format(socket_list[each_edge]))
+					#print(input_path)
+					send_files(socket_list[each_edge],input_path)
 					#edge_list_scp[each_edge].put(input_path)
 				#### need to figure out why vectors not passed
 
@@ -50,11 +55,11 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 			print(command)
 			#stdin,stdout,stderr=edge_list_ssh[allocation[str(eachtask)][0]].exec_command(command)
 			for each_edge in allocation[str(eachtask)]:
-				stdin,stdout,stderr=edge_list_ssh[each_edge].exec_command(command)
+				send_command(socket_list[each_edge],command)
 				#edge_list_ssh[each_edge].exec_command(command)
-				print("edge device {} executing command {}".format(each_edge,command))
-				for line in stderr.read().splitlines():
-					print(line)
+				#print("edge device {} executing command {}".format(each_edge,command))
+				#for line in stderr.read().splitlines():
+				#	print(line)
 
 	#print(dependency_dic)
 	#print(allocation)

@@ -1,6 +1,6 @@
 import os.path
 import subprocess
-
+"""
 instance_count = 50
 
 result_list = []
@@ -25,4 +25,8 @@ while result_list != []:
 			time_file.write("instance {} end:".format(instance))
 			time_file.write(out.decode("utf-8"))
 			time_file.close()
-			
+"""
+time_file = open("time.txt","a")
+for i in range(577000):
+	time_file.write("a")
+time_file.close()
