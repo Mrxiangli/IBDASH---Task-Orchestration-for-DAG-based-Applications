@@ -27,7 +27,7 @@ from pathlib import Path
 pp = pprint.PrettyPrinter(indent=4)
 
 
-def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic, access_dict):
+def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
 	######### IBOT-PI ######### 
 	
 	pf_ibdash_av=[]
@@ -185,7 +185,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			print(allocation)
 			print("instance cout start :{}".format(instance_count))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, access_dict)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list)
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
@@ -858,8 +858,12 @@ if __name__ =='__main__':
 	edge_list_ssh=[]
 	unavailable_edge = []
 	access_dict={}
-	access_dict[0]="128.46.32.175"
-	#socket_list = []
+	access_dict[0]="128.46.32.175" #ashraf server
+	#access_dict[1]="3.234.212.152"
+	socket_list = []
+	for i in range(num_edge_max):
+		s = socket_connections(access_dict[i],5001)
+		socket_list.append(s)
 
 	#for i in range(num_edge_max):
 
@@ -903,6 +907,11 @@ if __name__ =='__main__':
 		op_file.write(json.dumps(output_lookup))
 	op_file.close()
 
+	edge_list = "edge_list.json"
+	with open(edge_list,'w') as edge_file:
+		edge_file.write(json.dumps(access_dict))
+	edge_file.close()
+
 #	for i in range(4):
 #		if i < 3:
 #			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")#
@@ -911,13 +920,13 @@ if __name__ =='__main__':
 #			client_scp, client_ssh = createSSHClient(access_dict[i],"id_rsa.pub" )
 #		edge_list_scp.append(client_scp)
 #		edge_list_ssh.append(client_ssh)
-
-	for each in access_dict.keys():
-		#print(socket_list[each])
-		send_files(access_dict[each],5001,task_file)
-		send_files(access_dict[each],5001,dependency_lookup)
-		send_files(access_dict[each],5001, input_lp)
-		send_files(access_dict[each],5001, output_lp)
+	#send_files(socket_list[0],"/home/jonny/Documents/Research/IBDASH_V2/new_Train.txt")
+	for idx,each in enumerate(socket_list):
+		send_files(socket_list[idx],task_file)
+		send_files(socket_list[idx],dependency_lookup)
+		send_files(socket_list[idx],input_lp)
+		send_files(socket_list[idx],output_lp)
+		send_files(socket_list[idx],edge_list)
 		#each.put(dependency_file)
 		#each.put(task_file)
 		#each.put(dependency_lookup)
@@ -994,7 +1003,7 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 
-		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, access_dict)
+		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
 		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
 		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
 		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)

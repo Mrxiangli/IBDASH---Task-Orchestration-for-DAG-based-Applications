@@ -17,6 +17,8 @@ import os
 import sys
 import socket
 import tqdm
+import pdb
+import time
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -136,55 +138,55 @@ def task_info(vertices):
 	return task_dic
 
 def plot(graph):
-    plt.tight_layout()
-    nx.draw_networkx(graph, arrows=True)
-    #plt.savefig("../figures/DAG.png", format="PNG") #save plot
-    plt.show() #show plot
-    plt.clf()
+	plt.tight_layout()
+	nx.draw_networkx(graph, arrows=True)
+	#plt.savefig("../figures/DAG.png", format="PNG") #save plot
+	plt.show() #show plot
+	plt.clf()
 
 def dag(edges):
-    graph = nx.DiGraph()
-    graph.add_edges_from(edges)
-    graph.nodes()
-    ## TODO: check if the graph is cyclic
-    # plot(graph)
-    return graph
+	graph = nx.DiGraph()
+	graph.add_edges_from(edges)
+	graph.nodes()
+	## TODO: check if the graph is cyclic
+	# plot(graph)
+	return graph
 
 def linearize_dag(graph,path,paths=[]):
-    datum = path[-1]              
-    if datum in graph.keys():
-        for val in graph[datum]:
-            new_path = path + [val]
-            paths = linearize_dag(graph, new_path, paths)
-    else:
-        paths += [path]
-    return paths
+	datum = path[-1]              
+	if datum in graph.keys():
+		for val in graph[datum]:
+			new_path = path + [val]
+			paths = linearize_dag(graph, new_path, paths)
+	else:
+		paths += [path]
+	return paths
 
 
 def dag_linearization(f):
-    # returns JSON object as a dictionary
-    data = json.load(f)
-    #read edges of the graph
-    edge_list = []
-    for source in data["Application"]["Edges"].keys():
-        for target in data["Application"]["Edges"][source]:
-            edge_list.append(tuple([source,target]))
+	# returns JSON object as a dictionary
+	data = json.load(f)
+	#read edges of the graph
+	edge_list = []
+	for source in data["Application"]["Edges"].keys():
+		for target in data["Application"]["Edges"][source]:
+			edge_list.append(tuple([source,target]))
 
-    graph = dag(edge_list)
-    lin_dag=linearize_dag(data["Application"]["Edges"],path=["0"],paths=[])
-    #lin_list contains all the linearized chains in the DAG
-    lin_list=[]
-    for each_dag in lin_dag:
-        tmp_dag=[]
-        for idx, each in enumerate(each_dag):
-            if idx < len(each_dag)-1:
-                tmp_dag.append(tuple([each_dag[idx],each_dag[idx+1]]))
-        lin_list.append(tmp_dag)
+	graph = dag(edge_list)
+	lin_dag=linearize_dag(data["Application"]["Edges"],path=["0"],paths=[])
+	#lin_list contains all the linearized chains in the DAG
+	lin_list=[]
+	for each_dag in lin_dag:
+		tmp_dag=[]
+		for idx, each in enumerate(each_dag):
+			if idx < len(each_dag)-1:
+				tmp_dag.append(tuple([each_dag[idx],each_dag[idx+1]]))
+		lin_list.append(tmp_dag)
 
-    #read vertices of the graph
-    vertex_dict = data["Application"]["Vertices"]
-    edge_adj = data["Application"]["Edges"]
-    return data, graph, lin_list, vertex_dict, edge_adj
+	#read vertices of the graph
+	vertex_dict = data["Application"]["Vertices"]
+	edge_adj = data["Application"]["Edges"]
+	return data, graph, lin_list, vertex_dict, edge_adj
 
 def cpu_regression_setup(task_types, num_edge, app_path):
 	X_s=[]
@@ -302,27 +304,75 @@ def ping_test(ed):
 	#	return 1
 
 def socket_connections(host,port):
-
 	s = socket.socket()
-
 	print(f"[+] Connecting to {host}:{port}")
 	s.connect((host, port))
-	print(s)
+	s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 	print("[+] Connected.")
 	return s
 
 
-def send_files(host,port,filename):
+def send_files(s,filename):
 	SEPARATOR = "<SEPARATOR>"
-	BUFFER_SIZE = 4096 # send 4096 bytes each time step
+	BUFFER_SIZE = 65536 # send 4096 bytes each time step
 	NAME_SIZE = 256
 
-	s = socket.socket()
+	filesize = os.path.getsize(filename)
+	#print(filename)
+	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
+	#print(len(name))
+	s.send("F".encode())
+	s.send(name)
 
-	print(f"[+] Connecting to {host}:{port}")
-	s.connect((host, port))
-	print(s)
-	print("[+] Connected.")
+	#progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
+	counter = 0
+	with open(filename, "rb") as f:
+		bytes_read = f.read(filesize)
+		#print(bytes_read)
+		# s.sendall(bytes_read[: :BUFFER_SIZE])
+
+		start = time.time()
+		s.sendall(bytes_read)
+		# for i in range(int((filesize/BUFFER_SIZE)+1)):
+		# #for i in range(200):
+		# 	# read the bytes from the file
+		# 	# print(sys.getsizeof(bytes_read[i*BUFFER_SIZE : (i+1)* BUFFER_SIZE: BUFFER_SIZE]))
+		# 	# print(sys.getsizeof(bytes_read[:: BUFFER_SIZE]))
+		# 	# temp_byte = bytes_read[i*BUFFER_SIZE : (i+1)* BUFFER_SIZE]
+		# 	#pdb.set_trace()
+		# 	if not bytes_read:
+		# 		pdb.set_trace()
+		# 		# file transmitting is done
+		# 	 #   break
+		# 	# we use sendall to assure transimission in 
+		# 	# busy networks
+		# 	# s.sendall(bytes_read[i*BUFFER_SIZE : (i+1)* BUFFER_SIZE])
+		# 	s.sendall(bytes_read[: :BUFFER_SIZE])
+		# 	#print("lol")
+		# 	# update the progress bar
+		# 	#progress.update(len(bytes_read))
+
+		# 	# counter+=1;
+		# 	print(i)
+		end = time.time()
+		print(f"{filename}:finishing done: {end-start}")
+	s.send("/EOF".encode())
+	# close the socket
+	#s.close()
+	#print("closed socket")
+
+
+def send_command(s,msg):
+	SEPARATOR = "<SEPARATOR>"
+	BUFFER_SIZE = 4096 # send 4096 bytes each time step
+	MSG_SIZE = 256
+
+	#s = socket.socket()
+
+	#print(f"[+] Connecting to {host}:{port}")
+	#s.connect((host, port))
+	#print(s)
+	#print("[+] Connected.")
 	# the ip address or hostname of the server, the receiver
 	#host = "10.186.126.203"
 	# the port, let's use 5001
@@ -330,29 +380,28 @@ def send_files(host,port,filename):
 	# the name of file we want to send, make sure it exists
 	#filename = "test.txt"
 	# get the file size
-	filesize = os.path.getsize(filename)
-	print(filename)
-	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
-	print(len(name))
-	s.send("F".encode())
-	s.send(name)
+	#filesize = os.path.getsize(filename)
+	#print(filename)
+	#name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
+	#print(len(name))
+	s.send("C".encode())
+	s.send(msg.ljust(MSG_SIZE).encode())
+	#s.send(name)
 
-	progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
-	with open(filename, "rb") as f:
-	    while True:
-	        # read the bytes from the file
-	        bytes_read = f.read(BUFFER_SIZE)
-	        if not bytes_read:
-	            # file transmitting is done
-	            break
-	        # we use sendall to assure transimission in 
-	        # busy networks
-	        s.sendall(bytes_read)
-	        # update the progress bar
-	        progress.update(len(bytes_read))
+	# #progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
+	# #with open(filename, "rb") as f:
+	# #    while True:
+	# #        # read the bytes from the file
+	#  #       bytes_read = f.read(BUFFER_SIZE)
+	#  #       if not bytes_read:
+	#             # file transmitting is done
+	#  #           break
+	#         # we use sendall to assure transimission in 
+	#         # busy networks
+	#         s.sendall(bytes_read)
+	#         # update the progress bar
+	#         progress.update(len(bytes_read))
 	# close the socket
-	s.close()
-
-
+	#s.close()
 
 
