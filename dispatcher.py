@@ -51,7 +51,7 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 	for eachtask in dependency_dic.keys():
 		if dependency_dic[eachtask]==[None]:
 			allocation_file = "allocation_"+str(instance_count)+".json"
-			command = "nohup python governer.py --all {} --tk {} --ic {}".format(allocation_file,eachtask,instance_count)
+			command = "{} {} {} /EOC".format(allocation_file,eachtask,instance_count)
 			print(command)
 			#stdin,stdout,stderr=edge_list_ssh[allocation[str(eachtask)][0]].exec_command(command)
 			for each_edge in allocation[str(eachtask)]:

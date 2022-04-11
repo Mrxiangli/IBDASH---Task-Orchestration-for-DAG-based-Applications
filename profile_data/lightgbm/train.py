@@ -41,8 +41,10 @@ if __name__ =='__main__':
 					lgb_train,
 					num_boost_round=100, # number of trees
 					valid_sets=lgb_train,
-					callbacks=[lgb.log_evaluation(0)])
-	lgb.early_stopping(stopping_rounds=5)
+					verbose_eval=-1,
+					early_stopping_rounds = 5)
+					#callbacks=[lgb.log_evaluation(0)])
+	#lgb.early_stopping(stopping_rounds=5)
 	#lgb.log_evaluation(verbose_eval=False)
 
 	y_pred = gbm.predict(X_train, num_iteration=gbm.best_iteration)
