@@ -19,6 +19,8 @@ import socket
 import tqdm
 import pdb
 import time
+from threading import Thread
+from queue import Queue
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -366,42 +368,106 @@ def send_command(s,msg):
 	SEPARATOR = "<SEPARATOR>"
 	BUFFER_SIZE = 4096 # send 4096 bytes each time step
 	MSG_SIZE = 256
-
-	#s = socket.socket()
-
-	#print(f"[+] Connecting to {host}:{port}")
-	#s.connect((host, port))
-	#print(s)
-	#print("[+] Connected.")
-	# the ip address or hostname of the server, the receiver
-	#host = "10.186.126.203"
-	# the port, let's use 5001
-	#port = 5001
-	# the name of file we want to send, make sure it exists
-	#filename = "test.txt"
-	# get the file size
-	#filesize = os.path.getsize(filename)
-	#print(filename)
-	#name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
-	#print(len(name))
 	s.send("C".encode())
 	s.send(msg.ljust(MSG_SIZE).encode())
-	#s.send(name)
-
-	# #progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
-	# #with open(filename, "rb") as f:
-	# #    while True:
-	# #        # read the bytes from the file
-	#  #       bytes_read = f.read(BUFFER_SIZE)
-	#  #       if not bytes_read:
-	#             # file transmitting is done
-	#  #           break
-	#         # we use sendall to assure transimission in 
-	#         # busy networks
-	#         s.sendall(bytes_read)
-	#         # update the progress bar
-	#         progress.update(len(bytes_read))
-	# close the socket
-	#s.close()
 
 
+def send_label(s,label):
+	LABEL_SIZE = 256
+	print(label)
+	s.send("L".encode())
+	s.send(str(label).ljust(LABEL_SIZE).encode())
+
+def connection_creation_thread(connection_queue):
+	# device's IP address
+	SERVER_HOST = "0.0.0.0"
+	SERVER_PORT = 5001
+	# receive 4096 bytes each time
+	SEPARATOR = "<SEPARATOR>"
+	# create the server socket
+	# TCP socket
+	s = socket.socket()
+	s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+	# bind the socket to our local address
+	s.bind((SERVER_HOST, SERVER_PORT))
+
+	# enabling our server to accept connections
+	# 5 here is the number of unaccepted connections that
+	# the system will allow before refusing new connections
+	s.listen(100)
+	while True:
+		client_socket, address = s.accept() 
+		print("waiting for connection")
+		connection_queue.put([client_socket,address])
+		print(f"size of queue: {connection_queue.qsize()}")
+
+def spawn_listening_thread(connection_queue):
+	print("sssss")
+	while True:
+		#print(f"size of queue: {connection_queue.qsize()}")
+		while connection_queue.qsize() != 0:
+			print("waiting for connection queue to be filled")
+			client_socket,address = connection_queue.get()
+			Thread(target = connection_listening_thread, args=(client_socket,address)).start() #for each socket creating a listening thread
+
+def connection_listening_thread(client_socket,address):
+	global IDENTIFIER
+	BUFFER_SIZE = 65536
+	NAME_SIZE = 256
+	LABEL_SIZE = 256
+	SEPARATOR = "<SEPARATOR>"
+
+	print(f"socket at {address} is being listened")
+
+
+	while True:
+		msg_type = client_socket.recv(1).decode()
+		if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L":
+			print(f"msg: {len(msg_type)}")
+			print(f"msg: {msg_type}")
+			print(f"socket {client_socket} out of sync")
+		if msg_type == 'F':
+			start = time.time()
+			received = client_socket.recv(NAME_SIZE).decode()
+			print(received)
+			filename, filesize, space = received.split(SEPARATOR)
+			# remove absolute path if there is
+			filename = os.path.basename(filename)
+			# convert to integer
+			filesize = int(filesize)
+			
+			#Receiving files
+			received_size = 0
+			count = 0
+			bytes_read = b''
+			with open(filename, "wb") as f:
+				#bytes_read = client_socket.recv(filesize)
+				#print(len(bytes_read.decode()))
+				#print(len(bytes_read))
+				counter = 0
+				while (filesize - received_size) > BUFFER_SIZE:
+					bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
+					bytes_read+=bytes_read_chunk
+					received_size += len(bytes_read_chunk.decode())
+					counter+=1
+				residue = filesize - received_size
+
+				while residue > 0:
+					bytes_read_chunk = client_socket.recv(residue)
+					bytes_read += bytes_read_chunk
+					received_size += len(bytes_read_chunk.decode())
+					if len(bytes_read.decode()) - residue == 0:
+						break
+					else:
+						residue -= len(bytes_read_chunk.decode())
+
+				f.write(bytes_read)
+				end = time.time()
+				print(f"time: {end-start}")
+				if received_size == filesize:
+					bytes_read = client_socket.recv(4)
+					if bytes_read.decode() != "/EOF":
+						print(f" error transmitting {filename}")
+
+	s.close()

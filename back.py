@@ -15,6 +15,6 @@ client_scp = SCPClient(client.get_transport())
 
 for i in range(1):
     start = timer.time()
-    client_scp.put("/home/jonny/Documents/Research/IBDASH_V2/socket_io_server.py")
+    client_scp.put("/home/jonny/Documents/Research/IBDASH_V2/governer.py")
     end = timer.time()
     print("transfer time: {}".format(end-start))

@@ -15,7 +15,7 @@ import json
 import subprocess
 import time
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files, socket_connections
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files, socket_connections,send_label
 from helpers import plot as dagplot
 from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
@@ -920,8 +920,12 @@ if __name__ =='__main__':
 #			client_scp, client_ssh = createSSHClient(access_dict[i],"id_rsa.pub" )
 #		edge_list_scp.append(client_scp)
 #		edge_list_ssh.append(client_ssh)
-	#send_files(socket_list[0],"/home/jonny/Documents/Research/IBDASH_V2/new_Train.txt")
+	#send_files(socket_list[0],"/home/jonny/Documents/Research/IBDASH_V2/Digits_Train_Transform_1.txt")
+	#sys.exit()
 	for idx,each in enumerate(socket_list):
+		send_label(socket_list[idx],idx)
+	for idx,each in enumerate(socket_list):
+		send_files(socket_list[idx],dependency_file)
 		send_files(socket_list[idx],task_file)
 		send_files(socket_list[idx],dependency_lookup)
 		send_files(socket_list[idx],input_lp)
