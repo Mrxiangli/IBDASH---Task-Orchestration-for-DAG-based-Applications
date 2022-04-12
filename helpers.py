@@ -420,7 +420,6 @@ def connection_listening_thread(client_socket,address):
 
 	print(f"socket at {address} is being listened")
 
-
 	while True:
 		msg_type = client_socket.recv(1).decode()
 		if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L":

@@ -15,7 +15,7 @@ import json
 import subprocess
 import time
 
-from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files, socket_connections,send_label
+from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files, socket_connections,send_label,connection_creation_thread,spawn_listening_thread,connection_listening_thread
 from helpers import plot as dagplot
 from dispatcher import dispatch, createSSHClient
 from matplotlib import pyplot as plt
@@ -23,8 +23,11 @@ from matplotlib.animation import FuncAnimation
 from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from pathlib import Path
-
+from threading import Thread
+from queue import Queue
 pp = pprint.PrettyPrinter(indent=4)
+
+IDENTIFIER = -1
 
 
 def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
@@ -823,7 +826,7 @@ if __name__ =='__main__':
 	profile_data_path = os.path.join(os.getcwd(),"profile_data/")
 	app_path = os.path.join(profile_data_path,args.app)
 	app_json = os.path.join(app_path,'app_config.json')
-	
+	connection_q = Queue()
 
 	# Opening JSON file that contains the application dag
 	f = open(app_json) 
@@ -854,12 +857,16 @@ if __name__ =='__main__':
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
 	num_edge_max = 1					#number of edge devices in DAG
 
+	#Thread(target = connection_creation_thread, args = (connection_q,)).start()	# constantly colleccting all incoming connections and put them in a connection q
+	#Thread(target = spawn_listening_thread, args=(connection_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
+
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	unavailable_edge = []
 	access_dict={}
 	access_dict[0]="128.46.32.175" #ashraf server
 	#access_dict[1]="3.234.212.152"
+	access_dict[1]="128.46.73.218" 
 	socket_list = []
 	for i in range(num_edge_max):
 		s = socket_connections(access_dict[i],5001)
@@ -924,13 +931,13 @@ if __name__ =='__main__':
 	#sys.exit()
 	for idx,each in enumerate(socket_list):
 		send_label(socket_list[idx],idx)
+		send_files(socket_list[idx],edge_list)
 	for idx,each in enumerate(socket_list):
 		send_files(socket_list[idx],dependency_file)
 		send_files(socket_list[idx],task_file)
 		send_files(socket_list[idx],dependency_lookup)
 		send_files(socket_list[idx],input_lp)
 		send_files(socket_list[idx],output_lp)
-		send_files(socket_list[idx],edge_list)
 		#each.put(dependency_file)
 		#each.put(task_file)
 		#each.put(dependency_lookup)

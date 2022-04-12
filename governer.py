@@ -13,7 +13,7 @@ from queue import Queue
 import time
 import netifaces as ni
 
-IDENTIFIER = 10 
+IDENTIFIER = -1 
 
 def json_file_loader(file):
 	data = json.load(open(file))
@@ -82,7 +82,7 @@ def socket_connections(host,port):
 	print("[+] Connected.")
 	return s
 
-def connection_creation_thread(connection_queue):
+def connection_creation_thread(connection_queue, socket_q):
 	print("gggg")
 	# device's IP address
 	SERVER_HOST = "0.0.0.0"
@@ -105,6 +105,7 @@ def connection_creation_thread(connection_queue):
 		client_socket, address = s.accept() 
 		print("waiting for connection")
 		connection_queue.put([client_socket,address])
+		socket_q.put([client_socket,address])
 		print(f"size of queue: {connection_queue.qsize()}")
 
 def spawn_listening_thread(connection_queue, command_queue):
@@ -117,6 +118,7 @@ def spawn_listening_thread(connection_queue, command_queue):
 			Thread(target = connection_listening_thread, args=(client_socket,address,command_queue,)).start() #for each socket creating a listening thread
 
 def spawn_command_thread(command_queue,socket_list):
+	print("spawn_command_thread started")
 	while True:
 		while command_queue.qsize() != 0:
 			command = command_queue.get()
@@ -302,7 +304,7 @@ def processing_thread(command,socket_list):
 		
 		allocation_file = "allocation_"+str(instance_count)+".json"
 		command = "{} {} {}".format(allocation_file,each_tk,instance_count)
-		
+		print(f"socket_list:{socket_list}")
 		#print(command)
 		#print("the above command execute on ed: {}".format(ed))
 		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
@@ -315,25 +317,38 @@ def processing_thread(command,socket_list):
 if __name__ =='__main__':
 	connection_q = Queue()
 	command_q = Queue()
+	socket_q = Queue()
 	socket_list=[]
 	try:
-		Thread(target = connection_creation_thread, args = (connection_q,)).start()	# constantly colleccting all incoming connections and put them in a connection q
+		Thread(target = connection_creation_thread, args = (connection_q, socket_q)).start()	# constantly colleccting all incoming connections and put them in a connection q
 		Thread(target = spawn_listening_thread, args=(connection_q,command_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
-		Thread(target = spawn_command_thread, args = (command_q,socket_list,)).start() # reading the command from the queue an spawn thread to execue the command
+		command_thread=Thread(target = spawn_command_thread, args = (command_q,socket_list,)) # reading the command from the queue an spawn thread to execue the command
 	except:
 		print("ERROR")
-	
+	time.sleep(0.5)
 	while os.path.exists("edge_list.json") == False:
 		pass
-	time.sleep(0.5)
 	edge_list = json_file_loader("edge_list.json")
-	for each_edge in edge_list.keys():
-		s = socket_connections(edge_list[each_edge],5001)
-		socket_list.append(s)
+	while IDENTIFIER < 0: pass
+	while len(socket_list) != len(edge_list.keys())- 1 - IDENTIFIER:
+		print("gg")
+		if socket_q.qsize()!=0: 
+			client_socket,address = socket_q.get()
+			socket_list.insert(0,client_socket)
+	print(socket_list)
+	print("before")
+	for i in range(IDENTIFIER,-1,-1):
+		print(i)
+		if i <= IDENTIFIER:
+			s = socket_connections(edge_list[str(i)],5001)
+			print(f"new socket:{s}")
+			socket_list.insert(0,s)
+	print(socket_list)
+	command_thread.start()
 
 
 
- 
+
 	
 
 
