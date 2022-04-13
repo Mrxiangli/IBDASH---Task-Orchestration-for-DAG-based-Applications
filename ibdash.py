@@ -13,7 +13,7 @@ import math
 import random
 import json
 import subprocess
-import time
+import time as timer
 
 from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files, socket_connections,send_label,connection_creation_thread,spawn_listening_thread,connection_listening_thread
 from helpers import plot as dagplot
@@ -54,7 +54,8 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 	k=0      	
 	i=0
 	instance_count = 0
-	dispatcher_dic={}
+	dispatcher_dic = {}
+	non_meta_files = {}			#tracking the non-meta-file on each device
 
 	for time in clock_time:
 		time = round(time,2)
@@ -188,7 +189,8 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			print(allocation)
 			print("instance cout start :{}".format(instance_count))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			print("sleep for 20 s")
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
@@ -851,7 +853,7 @@ if __name__ =='__main__':
 	ntbd = 600						#network bandwidth
 	app_inst_time = 150				#the period of time that application instances might arrive
 	sim_time = 200000				#simulation period
-	num_arrivals = 1				#number of application instances arrived during app_ins_time	
+	num_arrivals = 5				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
@@ -871,6 +873,8 @@ if __name__ =='__main__':
 	for i in range(num_edge_max):
 		s = socket_connections(access_dict[i],5001)
 		socket_list.append(s)
+	for i in range(num_edge_max):
+		Thread(target = connection_listening_thread, args=(socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 
 	#for i in range(num_edge_max):
 

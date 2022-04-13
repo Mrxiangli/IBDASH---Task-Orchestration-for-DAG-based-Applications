@@ -20,6 +20,7 @@ import tqdm
 import pdb
 import time
 from threading import Thread
+import threading
 from queue import Queue
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -322,9 +323,11 @@ def send_files(s,filename):
 	filesize = os.path.getsize(filename)
 	#print(filename)
 	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
-	#print(len(name))
+	#print(name))
+	print(filename)
 	s.send("F".encode())
 	s.send(name)
+	#return
 
 	#progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
 	counter = 0
@@ -369,6 +372,7 @@ def send_command(s,msg):
 	BUFFER_SIZE = 4096 # send 4096 bytes each time step
 	MSG_SIZE = 256
 	s.send("C".encode())
+	#return
 	s.send(msg.ljust(MSG_SIZE).encode())
 
 
@@ -376,6 +380,7 @@ def send_label(s,label):
 	LABEL_SIZE = 256
 	print(label)
 	s.send("L".encode())
+	#return
 	s.send(str(label).ljust(LABEL_SIZE).encode())
 
 def connection_creation_thread(connection_queue):
