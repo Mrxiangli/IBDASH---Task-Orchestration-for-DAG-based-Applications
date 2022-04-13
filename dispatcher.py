@@ -19,32 +19,58 @@ def createSSHClient(server, password):
     return client_scp, client
 
 #The dispatch function should be called when one application instance is orchestrated
-def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inputfile_dic, socket_list):
+def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inputfile_dic, socket_list, non_meta_files):
 	allocation_file = os.path.join(directory,"allocation_"+str(instance_count)+".json")
 	with open(allocation_file,'w') as allocate:
 		allocate.write(json.dumps(allocation))
 	allocate.close()
 	for each_task in allocation.keys():
 		print("task {} is allocated to edge device {}".format(each_task,allocation[each_task]))
-		file_path=os.path.join(directory,task_dict[each_task])
+		file_path=os.path.join(directory,task_dict[each_task])	
+		for ed in allocation[each_task]:
+			send_files(socket_list[ed],allocation_file)
+			print(f"sending allocation file {allocation_file} through {socket_list[ed]}")
+			if ed not in non_meta_files.keys():
+				non_meta_files[ed]=[task_dict[each_task]]
+				send_files(socket_list[ed],file_path)
+				print(f"sending task {task_dict[each_task]}")
+			else:
+				if task_dict[each_task] in non_meta_files[ed]:
+					pass
+				else:
+					non_meta_files[ed].append(task_dict[each_task])
+					send_files(socket_list[ed],file_path)
+					print(f"sending task {task_dict[each_task]}")
+	print("ggggggggggggggg")
+	print(non_meta_files)
+		
 		#des_file = task_dict[each_task].split('.')[0]+"_"+str(instance_count)+".py"
 		#llocation_file_path = os.path
-		for each_device in allocation[each_task]:
-			send_files(socket_list[each_device],file_path)
-			send_files(socket_list[each_device],allocation_file)
-			#edge_list_scp[each_device].put(file_path)
-			#edge_list_scp[each_device].put(allocation_file)
-			pass
+		# for each_device in allocation[each_task]:
+		# 	send_files(socket_list[each_device],file_path)
+		# 	send_files(socket_list[each_device],allocation_file)
+		# 	#edge_list_scp[each_device].put(file_path)
+		# 	#edge_list_scp[each_device].put(allocation_file)
+		# 	pass
 
+	#following need to be changed no replicated files
 	for each in inputfile_dic:
 		for each_file in inputfile_dic[str(each)]:
 			if each_file[1]==0:
 				input_path = os.path.join(directory,each_file[0])
 				for each_edge in allocation[str(each)]:
-					pass
-					#print("edge connected : {}".format(socket_list[each_edge]))
-					#print(input_path)
-					send_files(socket_list[each_edge],input_path)
+					if each_edge not in non_meta_files.keys():
+						non_meta_files[each_edge]=[each_file[0]]
+						send_files(socket_list[each_edge],input_path)
+					else:
+						if each_file[0] in non_meta_files[each_edge]:
+							pass
+						else:
+							non_meta_files[each_edge].append(each_file[0])
+							send_files(socket_list[each_edge],input_path)
+							#print("edge connected : {}".format(socket_list[each_edge]))
+							#print(input_path)
+					#send_files(socket_list[each_edge],input_path)
 					#edge_list_scp[each_edge].put(input_path)
 				#### need to figure out why vectors not passed
 
