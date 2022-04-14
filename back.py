@@ -10,7 +10,7 @@ import time as timer
 
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect("128.46.32.175",username='johnny', key_filename="IBDASH_V2.pem")
+client.connect("3.234.212.152",username='ec2-user', key_filename="IBDASH_V2.pem")
 client_scp = SCPClient(client.get_transport())
 
 for i in range(1):
