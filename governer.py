@@ -11,8 +11,11 @@ import os
 from threading import Thread
 from queue import Queue
 import time
+import threading
 
 IDENTIFIER = -1 
+
+lock = threading.Lock()
 
 def json_file_loader(file):
 	data = json.load(open(file))
@@ -48,11 +51,13 @@ def createSSHClient(server, password):
 
 
 def send_files(s,filename):
+	global lock
 	SEPARATOR = "<SEPARATOR>"
 	BUFFER_SIZE = 65536 # send 4096 bytes each time step
 	NAME_SIZE = 256
 	filesize = os.path.getsize(filename)
 	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
+	lock.acquire()
 	s.send("F".encode())
 	print("blocking?")
 	s.send(name)
@@ -68,6 +73,7 @@ def send_files(s,filename):
 		end = time.time()
 		print(f"{filename}:finishing done: {end-start}")
 	s.send("/EOF".encode())
+	lock.release()
 
 
 def send_command(s,msg):
@@ -75,8 +81,11 @@ def send_command(s,msg):
 	BUFFER_SIZE = 4096 # send 4096 bytes each time step
 	MSG_SIZE = 256
 	print(msg)
+	global lock
+	lock.acquire()
 	s.send("C".encode())
 	s.send(msg.ljust(MSG_SIZE).encode())
+	lock.release()
 
 
 def socket_connections(host,port):
@@ -163,11 +172,13 @@ def connection_listening_thread(client_socket,address, command_queue):
 			print("###########################################")
 			start = time.time()
 			received = client_socket.recv(NAME_SIZE).decode()
+			print(f"received:{received}")
 			filename, filesize, space = received.split(SEPARATOR)
 			# remove absolute path if there is
 			filename = os.path.basename(filename)
 			# convert to integer
 			filesize = int(filesize)
+			print(f"filesize {filesize}")
 			
 			#Receiving files
 			received_size = 0
@@ -196,11 +207,13 @@ def connection_listening_thread(client_socket,address, command_queue):
 
 				f.write(bytes_read)
 				end = time.time()
+				print(f"received_size {received_size}")
 				print(f"{filename} is received")
 				print(f"time: {end-start}")
 				if received_size == filesize:
 					bytes_read = client_socket.recv(4)
 					if bytes_read.decode() != "/EOF":
+						print(f"eof? {bytes_read.decode()}")
 						print(f" error transmitting {filename}")
 
 		elif msg_type == "C":
