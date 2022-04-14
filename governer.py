@@ -11,7 +11,6 @@ import os
 from threading import Thread
 from queue import Queue
 import time
-import netifaces as ni
 
 IDENTIFIER = -1 
 
@@ -55,15 +54,21 @@ def send_files(s,filename):
 	filesize = os.path.getsize(filename)
 	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
 	s.send("F".encode())
+	print("blocking?")
 	s.send(name)
+	print("sending name?")
 	counter = 0
 	with open(filename, "rb") as f:
 		bytes_read = f.read(filesize)
+		print("able to read?")
 		start = time.time()
+		print(s)
 		s.sendall(bytes_read)
+		print("able to send?")
 		end = time.time()
 		print(f"{filename}:finishing done: {end-start}")
 	s.send("/EOF".encode())
+
 
 def send_command(s,msg):
 	SEPARATOR = "<SEPARATOR>"
@@ -93,10 +98,10 @@ def connection_creation_thread(connection_queue, socket_q):
 	# TCP socket
 	s = socket.socket()
 	s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-
+	print("binding now")
 	# bind the socket to our local address
 	s.bind((SERVER_HOST, SERVER_PORT))
-
+	print("finish binding")
 	# enabling our server to accept connections
 	# 5 here is the number of unaccepted connections that
 	# the system will allow before refusing new connections
@@ -111,7 +116,6 @@ def connection_creation_thread(connection_queue, socket_q):
 def spawn_listening_thread(connection_queue, command_queue):
 	print("sssss")
 	while True:
-		#print(f"size of queue: {connection_queue.qsize()}")
 		while connection_queue.qsize() != 0:
 			print("waiting for connection queue to be filled")
 			client_socket,address = connection_queue.get()
@@ -145,7 +149,7 @@ def connection_listening_thread(client_socket,address, command_queue):
 	while True:
 		print(f"{address} listening is alive")
 		msg_type = client_socket.recv(1).decode()
-		# print(f"msg: {msg_type}")
+		print(f"msg: {msg_type}")
 		# if msg_type == "F":
 		# 	received = client_socket.recv(NAME_SIZE).decode()
 		# 	filename, filesize, space = received.split(SEPARATOR)
@@ -278,14 +282,17 @@ def processing_thread(command,socket_list):
 
 	output_from_current_tk = output_lookup[str(tk_num)]
 	for each in output_from_current_tk:
+		print(f"file: {each}")
 		intermediate_file = each[0]+str(instance_count)+each[2]
-		#print(intermediate_file)
+		print(intermediate_file)
 		#print(each)
 		for each_edge in allocation_dic[str(each[3])]:
 			if each_edge != IDENTIFIER:
+				print("are we sending?")
 				send_files(socket_list[each_edge],intermediate_file)
+				print("finish sending?")
 			#edge_list_scp[each_edge].put(intermediate_file)
-
+	print("does it reach here?")
 	#looking for the dependency and find the next device and task
 	next_stage_dict=next_task(tk_num,depend_lookup,input_lookup)
 	#print(next_stage_dict)
@@ -302,22 +309,12 @@ def processing_thread(command,socket_list):
 	for each_tk in next_stage_dict.keys():
 		ed = allocation_dic[each_tk][0]
 		
-		#print(each_tk)
-		#print(next_stage_dict[each_tk])
-		# drop the input file to the designated device
-		#for each_input in next_stage_dict[each_tk]:
-			#print(each_input)
-		#	if each_input[1] == 1: #checking the second position first to see if it is a intermediate generated file
-		#		infile = each_input[0]+str(instance_count)+each_input[2]
-		#		if os.path.exists(infile):
-					#edge_list_scp[ed].put(infile) this is an unnecessary command; removed for now
-					#print("moving {} to ed : {}".format(infile,ed))
-		
 		allocation_file = "allocation_"+str(instance_count)+".json"
 		command = "{} {} {}".format(allocation_file,each_tk,instance_count)
 		#print(command)
 		#print("the above command execute on ed: {}".format(ed))
 		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
+		print("sending comand ==========: {command}")
 		send_command(socket_list[ed],command)
 		#edge_list_ssh[ed].exec_command(command)
 		#for line in stdout.read().splitlines():
@@ -338,7 +335,7 @@ if __name__ =='__main__':
 	
 	while os.path.exists("edge_list.json") == False:
 		pass
-	time.sleep(1)
+	time.sleep(2)
 	edge_list = json_file_loader("edge_list.json")
 	while IDENTIFIER < 0: pass
 	while len(socket_list) != len(edge_list.keys())- 1 - IDENTIFIER:
@@ -349,9 +346,10 @@ if __name__ =='__main__':
 		if i <= IDENTIFIER:
 			s = socket_connections(edge_list[str(i)],5001)
 			socket_list.insert(0,s)
+			connection_q.put([s,edge_list[str(i)]]) # this should put 
 	command_thread.start()
 
-
+	#the listening thread is not created
 
 
 	
