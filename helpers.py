@@ -28,6 +28,8 @@ pp = pprint.PrettyPrinter(indent=4)
 PING_PACKET_SIZE=64
 
 
+
+
 # this function insert and edge device to the ED_m and ED_c matrix
 def insert_edge_device(ED_m, ED_c, num_edge,new_edm_info, new_edc_info, ed_dict, ed_info):
 	row_m,col_m = ED_m.shape
@@ -372,7 +374,6 @@ def send_command(s,msg):
 	BUFFER_SIZE = 4096 # send 4096 bytes each time step
 	MSG_SIZE = 256
 	s.send("C".encode())
-	#return
 	s.send(msg.ljust(MSG_SIZE).encode())
 
 
@@ -380,9 +381,9 @@ def send_label(s,label):
 	LABEL_SIZE = 256
 	print(label)
 	s.send("L".encode())
-	#return
 	s.send(str(label).ljust(LABEL_SIZE).encode())
 
+# interleaveing issue!
 def connection_creation_thread(connection_queue):
 	# device's IP address
 	SERVER_HOST = "0.0.0.0"

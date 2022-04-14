@@ -1,7 +1,7 @@
 import os.path
 import subprocess
-"""
-instance_count = 50
+
+instance_count = 10
 
 result_list = []
 for i in range(1, instance_count+1):
@@ -13,6 +13,7 @@ newdir=os.path.join(current_dir,"result")
 timefile=os.path.join(current_dir,"time.txt")
 print(newdir)
 os.chdir(newdir)
+time_list = []
 
 while result_list != []:
 	for each in result_list:
@@ -20,13 +21,10 @@ while result_list != []:
 			p=subprocess.Popen(["date +%s%N"],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 			out,err = p.communicate()
 			result_list.remove(each)
+			time_list.append([instance,])
 			time_file = open(timefile,"a")
 			instance = each.split('_')[1].split('.')[0]
 			time_file.write("instance {} end:".format(instance))
 			time_file.write(out.decode("utf-8"))
 			time_file.close()
-"""
-time_file = open("time.txt","a")
-for i in range(577000):
-	time_file.write("a")
-time_file.close()
+

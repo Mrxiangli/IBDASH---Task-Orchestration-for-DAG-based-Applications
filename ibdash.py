@@ -853,7 +853,7 @@ if __name__ =='__main__':
 	ntbd = 600						#network bandwidth
 	app_inst_time = 150				#the period of time that application instances might arrive
 	sim_time = 200000				#simulation period
-	num_arrivals = 1				#number of application instances arrived during app_ins_time	
+	num_arrivals = 10				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
