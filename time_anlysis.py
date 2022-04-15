@@ -11,7 +11,7 @@ for each in time_list:
 	file = open(each,"r")
 	instance = 1
 	latency_tot = 0
-	while instance < 101:
+	while instance < 31:
 		time_stamp = file.readline()
 		time_stamp = time_stamp.split(":")
 		#print(time_stamp)
@@ -24,8 +24,8 @@ for each in time_list:
 			latency_dict[first_half[1]].append(stamp)
 		instance+=1
 	print(latency_dict)
-	for i in range(1,51):
-			latency = (latency_dict[str(i)][1]-latency_dict[str(i)][0])/10000000000
+	for i in range(1,16):
+			latency = abs(latency_dict[str(i)][1]-latency_dict[str(i)][0])/1000000000
 			#print(latency)
 			scheme_latency.append(latency)
 			latency_tot += latency

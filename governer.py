@@ -191,19 +191,23 @@ def connection_listening_thread(client_socket,address, command_queue):
 				counter = 0
 				while (filesize - received_size) > BUFFER_SIZE:
 					bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
-					bytes_read+=bytes_read_chunk
-					received_size += len(bytes_read_chunk.decode())
+					bytes_read+=bytes_read_chunk				
+					# received_size += len(bytes_read_chunk.decode())
+					received_size += len(bytes_read_chunk)
 					counter+=1
 				residue = filesize - received_size
 
 				while residue > 0:
 					bytes_read_chunk = client_socket.recv(residue)
 					bytes_read += bytes_read_chunk
-					received_size += len(bytes_read_chunk.decode())
-					if len(bytes_read.decode()) - residue == 0:
+					# received_size += len(bytes_read_chunk.decode())
+					received_size += len(bytes_read_chunk)
+					# if len(bytes_read.decode()) - residue == 0:
+					if len(bytes_read) - residue == 0:
 						break
 					else:
-						residue -= len(bytes_read_chunk.decode())
+						residue -= len(bytes_read_chunk)
+						# residue -= len(bytes_read_chunk.decode())
 
 				f.write(bytes_read)
 				end = time.time()
@@ -301,6 +305,8 @@ def processing_thread(command,socket_list):
 		#print(each)
 		for each_edge in allocation_dic[str(each[3])]:
 			if each_edge != IDENTIFIER:
+				print(f"IDENTIFIER:{IDENTIFIER}")
+				print(f"each_edge: {each_edge}")
 				print("are we sending?")
 				send_files(socket_list[each_edge],intermediate_file)
 				print("finish sending?")
