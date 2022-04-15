@@ -95,7 +95,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 							for each_dep in dependency_dic[int(each_task)]:
 								if each_dep[1] == 1:
 									# obtain the result size, using a fixed size for testing
-									data_trans_tmp = math.ceil(1200/ntbd)
+									data_trans_tmp = math.ceil(600000/ntbd)
 									if	data_trans_tmp > data_trans_t:
 										data_trans_t = data_trans_tmp
 
@@ -211,7 +211,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			load_ed[i] = np.add(load_ed[i],ED_tasks[j][i])
 	return time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av, load_ed, dispatcher_dic
 
-def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
+def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
 
 	########## Petrel ############
 	# a dictionary that used to track the available models on each edge device	
@@ -234,6 +234,7 @@ def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 	rp=0
 	instance_count = 0
 	service_time_petrel=[]
+	non_meta_files = {}			#tracking the non-meta-file on each device
 	for time in clock_time:
 		time = round(time,2)
 		if time not in task_time:
@@ -310,7 +311,7 @@ def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			schedule_time_petrel += end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_petrel.append(i/1000)
 			k=k+1
 			pf_petrel_av.append(tmp_pf_dic[task_types-1])
@@ -329,7 +330,7 @@ def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 
 	return time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av, load_ed_petrel
 
-def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):	
+def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):	
 	# a dictionary that used to track the available models on each edge device	
 	model_info=dict()
 	for i in range(num_edge):
@@ -352,6 +353,7 @@ def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depen
 	dispatcher_dic={}
 	schedule_time_lavea = 0
 	service_time_lavea=[]
+	non_meta_files = {}			#tracking the non-meta-file on each device
 	for time in clock_time:
 		time = round(time,2)
 		if time not in task_time:
@@ -435,7 +437,7 @@ def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depen
 			schedule_time_lavea +=end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_lavea.append(i/1000)
 			k=k+1
 			pf_lavea_av.append(tmp_pf_dic[task_types-1])
@@ -454,7 +456,7 @@ def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depen
 	return time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av, load_ed_lavea
 
 
-def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
+def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
 	########## Round Robin ############
 
 	model_info=dict()
@@ -464,7 +466,7 @@ def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict
 	clock_time = np.arange(0,sim_time,1)
 	schedule_time_rr = 0
 	ED_tasks = [[[0 for i in range(len(clock_time))] for j in range(num_edge)] for k in range(task_types) ]
-
+	non_meta_files = {}			#tracking the non-meta-file on each device
 	k=0
 	i=0
 	rp=0
@@ -546,7 +548,7 @@ def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict
 			schedule_time_rr += end_time- start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_rr.append(i/1000)
 			k=k+1
 			pf_rr_av.append(tmp_pf_dic[task_types-1])
@@ -564,7 +566,7 @@ def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict
 			load_ed_rr[i] = np.add(load_ed_rr[i],ED_tasks[j][i])
 	return time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av, load_ed_rr
 
-def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic):
+def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
 	########## Random ############
 
 	model_info=dict()
@@ -574,7 +576,7 @@ def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 	clock_time = np.arange(0,sim_time,1)
 	schedule_time_rd = 0
 	ED_tasks = [[[0 for i in range(len(clock_time))] for j in range(num_edge)] for k in range(task_types) ]
-
+	non_meta_files = {}			#tracking the non-meta-file on each device
 	k=0
 	i=0
 	rp=0
@@ -650,7 +652,7 @@ def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			schedule_time_rd = end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_rd.append(i/1000)
 			k=k+1
 			pf_rd_av.append(tmp_pf_dic[task_types-1])
@@ -668,7 +670,7 @@ def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			load_ed_rd[i] = np.add(load_ed_rd[i],ED_tasks[j][i])
 	return time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av, load_ed_rd
 
-def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edgelist_ssh,app_directory,inputfile_dic,ed_cpu_regression,ed_latency_regression):
+def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
 	# ########## LATs ############
 
 	model_info=dict()
@@ -680,7 +682,7 @@ def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depend
 	# task_ED_cpu = np.array(pd.read_excel(EDmc_path,engine="openpyxl",sheet_name="cpu",skiprows=0, nrows= num_edge))
 	ED_tasks = [[[0 for i in range(len(clock_time))] for j in range(num_edge)] for k in range(task_types) ]
 	# ED_usage = [[0 for i in range(len(clock_time))] for j in range(num_edge)]
-
+	non_meta_files = {}			#tracking the non-meta-file on each device
 	k=0
 	i=0
 	rp=0
@@ -792,7 +794,7 @@ def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depend
 			schedule_time_lats = end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,edge_list_scp,edge_list_ssh,task_file_dic, instance_count, dependency_dic,inputfile_dic)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_lats.append(i/1000)
 			#print(service_time_lats)
 			k=k+1
@@ -853,7 +855,7 @@ if __name__ =='__main__':
 	ntbd = 600						#network bandwidth
 	app_inst_time = 150				#the period of time that application instances might arrive
 	sim_time = 200000				#simulation period
-	num_arrivals = 5				#number of application instances arrived during app_ins_time	
+	num_arrivals = 30				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
@@ -1021,7 +1023,7 @@ if __name__ =='__main__':
 			edge_info[i]={"total": 10000, "available": 4000}
 
 		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
-		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
+		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
 		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
 		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
 		#time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
