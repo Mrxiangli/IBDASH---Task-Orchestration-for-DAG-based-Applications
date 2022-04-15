@@ -454,18 +454,18 @@ def connection_listening_thread(client_socket,address):
 				while (filesize - received_size) > BUFFER_SIZE:
 					bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
 					bytes_read+=bytes_read_chunk
-					received_size += len(bytes_read_chunk.decode())
+					received_size += len(bytes_read_chunk)
 					counter+=1
 				residue = filesize - received_size
 
 				while residue > 0:
 					bytes_read_chunk = client_socket.recv(residue)
 					bytes_read += bytes_read_chunk
-					received_size += len(bytes_read_chunk.decode())
-					if len(bytes_read.decode()) - residue == 0:
+					received_size += len(bytes_read_chunk)
+					if len(bytes_read) - residue == 0:
 						break
 					else:
-						residue -= len(bytes_read_chunk.decode())
+						residue -= len(bytes_read_chunk)
 
 				f.write(bytes_read)
 				end = time.time()
