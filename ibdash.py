@@ -185,7 +185,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
-			allocation={"0": [0], "1": [1], "2": [0]}
+			#allocation={"0": [1], "1": [1], "2": [0]}
 			print(allocation)
 			print("instance cout start :{}".format(instance_count))
 			get_times_stamp(instance_count)
@@ -853,11 +853,11 @@ if __name__ =='__main__':
 	ntbd = 600						#network bandwidth
 	app_inst_time = 150				#the period of time that application instances might arrive
 	sim_time = 200000				#simulation period
-	num_arrivals = 10				#number of application instances arrived during app_ins_time	
+	num_arrivals = 20				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 2					#number of edge devices in DAG
+	num_edge_max = 3					#number of edge devices in DAG
 
 	#Thread(target = connection_creation_thread, args = (connection_q,)).start()	# constantly colleccting all incoming connections and put them in a connection q
 	#Thread(target = spawn_listening_thread, args=(connection_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
@@ -866,9 +866,11 @@ if __name__ =='__main__':
 	edge_list_ssh=[]
 	unavailable_edge = []
 	access_dict={}
-	access_dict[0]="128.46.32.175" #ashraf server
-	access_dict[1]="3.234.212.152"
-	access_dict[2]="128.46.73.218" 
+	access_dict[0]="3.228.0.215" #t2
+	access_dict[1]="54.172.191.10" #t22x
+	access_dict[2]="3.234.212.152" #t3x
+	#access_dict[3]="128.46.32.175" #ashraf server
+	access_dict[3]="128.46.73.218"
 	socket_list = []
 	for i in range(num_edge_max):
 		s = socket_connections(access_dict[i],5001)
