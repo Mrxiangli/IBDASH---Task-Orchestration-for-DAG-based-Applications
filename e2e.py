@@ -1,7 +1,7 @@
 import os.path
 import subprocess
 
-instance_count = 20
+instance_count = 1
 
 result_list = []
 for i in range(1, instance_count+1):

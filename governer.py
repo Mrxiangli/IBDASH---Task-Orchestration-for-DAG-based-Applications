@@ -13,7 +13,9 @@ from queue import Queue
 import time
 import threading
 
-IDENTIFIER = -1 
+IDENTIFIER = -1
+
+
 
 lock = threading.Lock()
 
@@ -141,6 +143,7 @@ def spawn_command_thread(command_queue,socket_list):
 
 def connection_listening_thread(client_socket,address, command_queue):
 	global IDENTIFIER
+	global CONNNECTION_EASTABLISHED
 	BUFFER_SIZE = 65536
 	NAME_SIZE = 256
 	LABEL_SIZE = 256
@@ -154,91 +157,92 @@ def connection_listening_thread(client_socket,address, command_queue):
 	# if below code is executed, that means the sender is connected
 	#print(f"[+] {address} is connected.")
 	# for each connection
-
 	while True:
-		print(f"{address} listening is alive")
-		msg_type = client_socket.recv(1).decode()
-		print(f"msg: {msg_type}")
-		# if msg_type == "F":
-		# 	received = client_socket.recv(NAME_SIZE).decode()
-		# 	filename, filesize, space = received.split(SEPARATOR)
-		# 	print(f"filename: {filename}")
+		if CONNNECTION_EASTABLISHED == True:
+			print(f"{address} listening is alive")
+			msg_type = client_socket.recv(1).decode()
+			print(f"msg: {msg_type}")
+			# if msg_type == "F":
+			# 	received = client_socket.recv(NAME_SIZE).decode()
+			# 	filename, filesize, space = received.split(SEPARATOR)
+			# 	print(f"filename: {filename}")
 
-		# continue
-		# if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L":
-		# 	print(f"msg: {msg_type}")
-		# 	print(f"socket {client_socket} out of sync")
-		if msg_type == 'F':
-			print("###########################################")
-			start = time.time()
-			received = client_socket.recv(NAME_SIZE).decode()
-			print(f"received:{received}")
-			filename, filesize, space = received.split(SEPARATOR)
-			# remove absolute path if there is
-			filename = os.path.basename(filename)
-			# convert to integer
-			filesize = int(filesize)
-			print(f"filesize {filesize}")
+			# continue
+			# if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L":
+			# 	print(f"msg: {msg_type}")
+			# 	print(f"socket {client_socket} out of sync")
+			if msg_type == 'F':
+				print("###########################################")
+				start = time.time()
+				received = client_socket.recv(NAME_SIZE).decode()
+				print(f"received:{received}")
+				filename, filesize, space = received.split(SEPARATOR)
+				# remove absolute path if there is
+				filename = os.path.basename(filename)
+				# convert to integer
+				filesize = int(filesize)
+				print(f"filesize {filesize}")
+				
+				#Receiving files
+				received_size = 0
+				count = 0
+				bytes_read = b''
+				with open(filename, "wb") as f:
+					#bytes_read = client_socket.recv(filesize)
+					#print(len(bytes_read.decode()))
+					#print(len(bytes_read))
+					counter = 0
+					while (filesize - received_size) > BUFFER_SIZE:
+						bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
+						bytes_read+=bytes_read_chunk				
+						# received_size += len(bytes_read_chunk.decode())
+						received_size += len(bytes_read_chunk)
+						counter+=1
+					residue = filesize - received_size
+
+					while residue > 0:
+						bytes_read_chunk = client_socket.recv(residue)
+						bytes_read += bytes_read_chunk
+						# received_size += len(bytes_read_chunk.decode())
+						received_size += len(bytes_read_chunk)
+						# if len(bytes_read.decode()) - residue == 0:
+						if len(bytes_read) - residue == 0:
+							break
+						else:
+							residue -= len(bytes_read_chunk)
+							# residue -= len(bytes_read_chunk.decode())
+
+					f.write(bytes_read)
+					end = time.time()
+					print(f"received_size {received_size}")
+					print(f"{filename} is received")
+					print(f"time: {end-start}")
+					if received_size == filesize:
+						bytes_read = client_socket.recv(4)
+						if bytes_read.decode() != "/EOF":
+							print(f"eof? {bytes_read.decode()}")
+							print(f" error transmitting {filename}")
+
+			elif msg_type == "C":
+				command = client_socket.recv(MSG_SIZE).decode()
+				command_queue.put(command)
+
+			elif msg_type == "L":
+				label= client_socket.recv(NAME_SIZE).decode()
+				#label=int(label.strip())
+				IDENTIFIER = int(label)
+				print(f"IDENTIFIER: {IDENTIFIER}")
+				CONNNECTION_EASTABLISHED = False
+				#command_queue.put(command)
 			
-			#Receiving files
-			received_size = 0
-			count = 0
-			bytes_read = b''
-			with open(filename, "wb") as f:
-				#bytes_read = client_socket.recv(filesize)
-				#print(len(bytes_read.decode()))
-				#print(len(bytes_read))
-				counter = 0
-				while (filesize - received_size) > BUFFER_SIZE:
-					bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
-					bytes_read+=bytes_read_chunk				
-					# received_size += len(bytes_read_chunk.decode())
-					received_size += len(bytes_read_chunk)
-					counter+=1
-				residue = filesize - received_size
+			else:
+				print(f'getting shitty packets')
 
-				while residue > 0:
-					bytes_read_chunk = client_socket.recv(residue)
-					bytes_read += bytes_read_chunk
-					# received_size += len(bytes_read_chunk.decode())
-					received_size += len(bytes_read_chunk)
-					# if len(bytes_read.decode()) - residue == 0:
-					if len(bytes_read) - residue == 0:
-						break
-					else:
-						residue -= len(bytes_read_chunk)
-						# residue -= len(bytes_read_chunk.decode())
-
-				f.write(bytes_read)
-				end = time.time()
-				print(f"received_size {received_size}")
-				print(f"{filename} is received")
-				print(f"time: {end-start}")
-				if received_size == filesize:
-					bytes_read = client_socket.recv(4)
-					if bytes_read.decode() != "/EOF":
-						print(f"eof? {bytes_read.decode()}")
-						print(f" error transmitting {filename}")
-
-		elif msg_type == "C":
-			command = client_socket.recv(MSG_SIZE).decode()
-			command_queue.put(command)
-
-		elif msg_type == "L":
-			label= client_socket.recv(NAME_SIZE).decode()
-			#label=int(label.strip())
-			IDENTIFIER = int(label)
-			print(f"IDENTIFIER: {IDENTIFIER}")
-			#command_queue.put(command)
-		
-		else:
-			print(f'getting shitty packets')
-
-		# close the client socket
-		#client_socket.close()
-	# close the server socket
-	print(f"{address} is closing")
-	s.close()
+			# close the client socket
+			#client_socket.close()
+		# close the server socket
+		#print(f"{address} is closing")
+	client_socket.close()
 
 def processing_thread(command,socket_list):
 	global IDENTIFIER
@@ -339,34 +343,46 @@ def processing_thread(command,socket_list):
 		#for line in stdout.read().splitlines():
 		#	print(line)
 
+
 #Running this on each edge
 if __name__ =='__main__':
 	connection_q = Queue()
 	command_q = Queue()
 	socket_q = Queue()
 	socket_list=[]
+
+	CONNNECTION_EASTABLISHED = True
+
 	try:
 		Thread(target = connection_creation_thread, args = (connection_q, socket_q)).start()	# constantly colleccting all incoming connections and put them in a connection q
 		Thread(target = spawn_listening_thread, args=(connection_q,command_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 		command_thread=Thread(target = spawn_command_thread, args = (command_q,socket_list,)) # reading the command from the queue an spawn thread to execue the command
+		
 	except:
 		print("ERROR")
 	
-	while os.path.exists("edge_list.json") == False:
-		pass
-	time.sleep(2)
 	edge_list = json_file_loader("edge_list.json")
+	for i in range(len(edge_list.keys())):
+		socket_list.append(None)
 	while IDENTIFIER < 0: pass
-	while len(socket_list) != len(edge_list.keys())- 1 - IDENTIFIER:
+	counter = 0
+	while counter != len(edge_list.keys())- 1 - IDENTIFIER:
 		if socket_q.qsize()!=0: 
 			client_socket,address = socket_q.get()
-			socket_list.insert(0,client_socket)
+			ident = int(list(edge_list.keys())[list(edge_list.values()).index(address[0])])
+			socket_list[ident]=client_socket
+			counter +=1
 	for i in range(IDENTIFIER,-1,-1):
 		if i <= IDENTIFIER:
 			s = socket_connections(edge_list[str(i)],5001)
-			socket_list.insert(0,s)
+			ident = int(list(edge_list.keys())[list(edge_list.values()).index(edge_list[str(i)])])
+			socket_list[ident]=s
 			connection_q.put([s,edge_list[str(i)]]) # this should put 
+
+
+
 	command_thread.start()
+	CONNNECTION_EASTABLISHED = True
 
 	#the listening thread is not created
 
