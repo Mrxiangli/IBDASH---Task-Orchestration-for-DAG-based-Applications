@@ -56,7 +56,9 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 	instance_count = 0
 	dispatcher_dic = {}
 	non_meta_files = {}			#tracking the non-meta-file on each device
+	ntbd = 60
 
+	start_orch = timer.time()
 	for time in clock_time:
 		time = round(time,2)
 		if time not in task_time:
@@ -95,7 +97,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 							for each_dep in dependency_dic[int(each_task)]:
 								if each_dep[1] == 1:
 									# obtain the result size, using a fixed size for testing
-									data_trans_tmp = math.ceil(600000/ntbd)
+									data_trans_tmp = math.ceil(6000000/ntbd)
 									if	data_trans_tmp > data_trans_t:
 										data_trans_t = data_trans_tmp
 
@@ -106,8 +108,8 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 						fail_prev_queue.append([j,predict_time])
 					fail_prev_queue=sorted(fail_prev_queue,key=lambda x: x[1])
 					fail_prev_norm_queue=[]
-					print(fail_prev_queue)
-					print(num_rep)
+					#print(fail_prev_queue)
+					#print(num_rep)
 					for serv_time in fail_prev_queue:
 						norm_ele = [serv_time[0],serv_time[1]/fail_prev_queue[-1][1]] # this line has been changed!!! [num_rep-1] -> -1
 						fail_prev_norm_queue.append(norm_ele)
@@ -185,17 +187,18 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
-			#allocation={"0": [1], "1": [1], "2": [0]}
+			#allocation={"0": [1], "1": [1], "2": [1]}
 			print(allocation)
 			print("instance cout start :{}".format(instance_count))
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
-			print("sleep for 20 s")
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
 			#print(allocation)
 			pf_ibdash_av.append(tmp_pf_dic[task_types-1])
+	end_orch = timer.time()
+	print(f"average orchestration time: {(end_orch-start_orch)/len(task_time)}")
 	average_service_time_ibdash = sum(service_time_ibdash)/len(task_time)
 	average_service_time_ibdash_norm = sum(service_time_ibdash_norm)/len(task_time)
 	service_time_ibdash_x = []
@@ -670,7 +673,7 @@ def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			load_ed_rd[i] = np.add(load_ed_rd[i],ED_tasks[j][i])
 	return time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av, load_ed_rd
 
-def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
+def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list, ed_cpu_regression,ed_latency_regression):
 	# ########## LATs ############
 
 	model_info=dict()
@@ -855,11 +858,11 @@ if __name__ =='__main__':
 	ntbd = 600						#network bandwidth
 	app_inst_time = 150				#the period of time that application instances might arrive
 	sim_time = 200000				#simulation period
-	num_arrivals = 30				#number of application instances arrived during app_ins_time	
+	num_arrivals = 3				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 4					#number of edge devices in DAG
+	num_edge_max = 3					#number of edge devices in DAG
 
 	#Thread(target = connection_creation_thread, args = (connection_q,)).start()	# constantly colleccting all incoming connections and put them in a connection q
 	#Thread(target = spawn_listening_thread, args=(connection_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
@@ -868,11 +871,13 @@ if __name__ =='__main__':
 	edge_list_ssh=[]
 	unavailable_edge = []
 	access_dict={}
-	access_dict[0]="3.228.0.215" #t2
+	access_dict[0]="3.228.0.215" #t2x
 	access_dict[1]="54.172.191.10" #t22x
 	access_dict[2]="3.234.212.152" #t3x
-	access_dict[3]="128.46.32.175" #ashraf server
-	access_dict[4]="128.46.73.218"
+	#access_dict[3]="128.46.32.175" #ashraf server
+	#access_dict[5]="44.204.119.25" #t22x
+
+	access_dict[3]="128.46.73.218"
 	socket_list = []
 	for i in range(num_edge_max):
 		s = socket_connections(access_dict[i],5001)
@@ -990,7 +995,7 @@ if __name__ =='__main__':
 		ED_c = np.array(pd.read_excel(EDmc_file,engine="openpyxl",sheet_name="edc",skiprows=0, nrows= num_edge))
 
 		#probabily of failure for each edge device (used expotential distribution for simulation)
-		lam2=[0.000000015, 0.0000011, 0.000000015, 0.000024, 0.000009, 0.0000032, 0.000031, 0.0000001,0.0000015,0.0000015]   	#mix
+		lam2=[0.000000015, 0.00000011, 0.000000015, 0.000000024, 0.00000009, 0.000000032, 0.00000031, 0.00000001,0.0000015,0.0000015]   	#mix
 		#lam2=[0.00015, 0.00011, 0.00015, 0.00024, 0.0009, 0.000032, 0.0001, 0.0009]   									#PED
 		#lam2=[0.000015, 0.000011, 0.000015, 0.000011, 0.000018, 0.000012, 0.00001, 0.00002]   							#CED
 
@@ -1022,12 +1027,12 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 
-		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		#time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
 		#time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
-		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
-		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
-		#time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic)
-		#time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,edge_list_scp,edge_list_ssh,app_directory,inputfile_dic,ed_cpu_regression,ed_latency_regression)
+		#time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		#time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		#time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list, ed_cpu_regression,ed_latency_regression)
 
 """
 		fig2, orch = plt.subplots(3,2,sharex=True)

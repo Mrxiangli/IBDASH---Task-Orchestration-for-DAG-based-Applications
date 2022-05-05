@@ -23,7 +23,7 @@ def createSSHClient(server, password):
 scp_list=[]
 ssh_list=[]
 
-server_list = [("54.172.191.10","IBDASH_V2.pem"),("3.234.212.152","IBDASH_V2.pem"),("3.228.0.215","IBDASH_V2.pem"),("128.46.32.175","pass.pd")]
+server_list = [("54.172.191.10","IBDASH_V2.pem"),("3.234.212.152","IBDASH_V2.pem"),("3.228.0.215","IBDASH_V2.pem")]
 for each in server_list:
     scp,ssh = createSSHClient(each[0],each[1])
     scp_list.append(scp)
