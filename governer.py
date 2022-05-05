@@ -9,9 +9,10 @@ import errno
 import socket
 import os
 from threading import Thread
-from queue import Queue
+from queue import PriorityQueue, Queue
 import time
 import threading
+import ast
 
 IDENTIFIER = -1
 
@@ -137,8 +138,8 @@ def spawn_command_thread(command_queue,socket_list):
 	while True:
 		while command_queue.qsize() != 0:
 			print(f"command queue: {command_queue}")
-			command = command_queue.get()
-			print(f"getting command < {command} > out")
+			command = ast.literal_eval(command_queue.get())[1]
+			print(f"getting command < {command[1]} > out")
 			Thread(target = processing_thread, args=(command,socket_list,)).start() #for each
 
 def connection_listening_thread(client_socket,address, command_queue):
@@ -225,7 +226,9 @@ def connection_listening_thread(client_socket,address, command_queue):
 
 			elif msg_type == "C":
 				command = client_socket.recv(MSG_SIZE).decode()
-				command_queue.put(command)
+				priority=ast.literal_eval(command)[0]
+				real_command = ast.literal_eval(command)[1]
+				command_queue.put(str((priority,real_command)))
 
 			elif msg_type == "L":
 				label= client_socket.recv(NAME_SIZE).decode()
@@ -319,7 +322,7 @@ def processing_thread(command,socket_list):
 	#looking for the dependency and find the next device and task
 	next_stage_dict=next_task(tk_num,depend_lookup,input_lookup)
 	#print(next_stage_dict)
-	#Curent task is the last task
+	#Current task is the last task
 	if len(next_stage_dict) == 0:
 		#print(input_lookup['end'])
 		output_file=f"predict_{instance_count}.txt"
@@ -334,10 +337,11 @@ def processing_thread(command,socket_list):
 		
 		allocation_file = "allocation_"+str(instance_count)+".json"
 		command = "{} {} {}".format(allocation_file,each_tk,instance_count)
+		command = str((int(instance_count),command))
 		#print(command)
 		#print("the above command execute on ed: {}".format(ed))
 		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
-		print("sending comand ==========: {command}")
+		print(f"sending comand ==========: {command}")
 		send_command(socket_list[ed],command)
 		#edge_list_ssh[ed].exec_command(command)
 		#for line in stdout.read().splitlines():
@@ -347,7 +351,7 @@ def processing_thread(command,socket_list):
 #Running this on each edge
 if __name__ =='__main__':
 	connection_q = Queue()
-	command_q = Queue()
+	command_q = PriorityQueue()
 	socket_q = Queue()
 	socket_list=[]
 

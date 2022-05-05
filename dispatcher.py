@@ -25,24 +25,24 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 		allocate.write(json.dumps(allocation))
 	allocate.close()
 	for each_task in allocation.keys():
-		print("task {} is allocated to edge device {}".format(each_task,allocation[each_task]))
+	#	print("task {} is allocated to edge device {}".format(each_task,allocation[each_task]))
 		file_path=os.path.join(directory,task_dict[each_task])	
 		for ed in allocation[each_task]:
 			send_files(socket_list[ed],allocation_file)
-			print(f"sending allocation file {allocation_file} through {socket_list[ed]}")
+	#		print(f"sending allocation file {allocation_file} through {socket_list[ed]}")
 			if ed not in non_meta_files.keys():
 				non_meta_files[ed]=[task_dict[each_task]]
 				send_files(socket_list[ed],file_path)
-				print(f"sending task {task_dict[each_task]}")
+	#			print(f"sending task {task_dict[each_task]}")
 			else:
 				if task_dict[each_task] in non_meta_files[ed]:
 					pass
 				else:
 					non_meta_files[ed].append(task_dict[each_task])
 					send_files(socket_list[ed],file_path)
-					print(f"sending task {task_dict[each_task]}")
-	print("ggggggggggggggg")
-	print(non_meta_files)
+	#				print(f"sending task {task_dict[each_task]}")
+	#print("ggggggggggggggg")
+	#print(non_meta_files)
 		
 		#des_file = task_dict[each_task].split('.')[0]+"_"+str(instance_count)+".py"
 		#llocation_file_path = os.path
@@ -78,7 +78,8 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 		if dependency_dic[eachtask]==[None]:
 			allocation_file = "allocation_"+str(instance_count)+".json"
 			command = "{} {} {} /EOC".format(allocation_file,eachtask,instance_count)
-			print(command)
+			command = str((int(instance_count),command))		# priority command queue
+	#		print(command)
 			#stdin,stdout,stderr=edge_list_ssh[allocation[str(eachtask)][0]].exec_command(command)
 			for each_edge in allocation[str(eachtask)]:
 				send_command(socket_list[each_edge],command)

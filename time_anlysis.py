@@ -1,50 +1,52 @@
 from matplotlib import pyplot as plt
 import os
+import os.path
+import subprocess
+import argparse
+import configparser
 
 mini=1000000000000000000000
 maxi=0
-current_dir = os.getcwd()
-new_dir = os.path.join(current_dir,"result/ibdash")
-os.chdir(new_dir)
-#time_list = ["time_ibdash.txt","time_petrel.txt","time_lavea.txt","time_rr.txt","time_rd.txt"]
-time_list = ["time_30_4d.txt"]
-average_latency=[]
-detail_latency=[]
-for each in time_list:
-	latency_dict={}
-	scheme_latency=[]
+if __name__ =='__main__':
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--c', type=int, nargs="?")
+	parser.add_argument('--f', type=str, nargs="?")
+	args = parser.parse_args()
+	time_list = [args.f]
+	average_latency=[]
+	detail_latency=[]
+	count = args.c
+	for each in time_list:
+		latency_dict={}
+		scheme_latency=[]
 
-	file = open(each,"r")
-	instance = 1
-	latency_tot = 0
-	while instance < 61:
-		time_stamp = file.readline()
-		time_stamp = time_stamp.split(":")
-		#print(time_stamp)
-		first_half = time_stamp[0]
-		stamp = int(time_stamp[1])
-		if stamp < mini:
-			mini = stamp
-		if stamp > maxi:
-			maxi = stamp
-		first_half = first_half.split(" ")
-		if first_half[1] not in latency_dict.keys():
-			latency_dict[first_half[1]]=[stamp]
-		else:
-			latency_dict[first_half[1]].append(stamp)
-		instance+=1
-	print(latency_dict)
-	for i in range(1,31):
-			latency = abs(latency_dict[str(i)][1]-latency_dict[str(i)][0])/1000000000
-			#print(latency)
-			scheme_latency.append(latency)
-			latency_tot += latency
-	print("average: {}".format(latency_tot/50))
-	average_latency.append(latency_tot/50)
-	detail_latency.append(scheme_latency)
-	print(maxi)
-	print(mini)
-	print(f" throughput: {(maxi-mini)/(1000000000*30)}")
+		file = open(each,"r")
+		instance = 1
+		latency_tot = 0
+		while instance < count*2+1:
+			time_stamp = file.readline()
+			time_stamp = time_stamp.split(":")
+			#print(time_stamp)
+			first_half = time_stamp[0]
+			stamp = int(time_stamp[1])
+			if stamp < mini:
+				mini = stamp
+			if stamp > maxi:
+				maxi = stamp
+			first_half = first_half.split(" ")
+			if first_half[1] not in latency_dict.keys():
+				latency_dict[first_half[1]]=[stamp]
+			else:
+				latency_dict[first_half[1]].append(stamp)
+			instance+=1
+		print(latency_dict)
+		for i in range(1,count+1):
+				latency = abs(latency_dict[str(i)][1]-latency_dict[str(i)][0])/1000000000
+				#print(latency)
+				scheme_latency.append(latency)
+				latency_tot += latency
+		print("average: {}".format(latency_tot/args.c))
+		print(f"throughput: {(maxi-mini)/(1000000000*args.c)}")
 
 """
 fig1, time = plt.subplots(3,2,sharex=True)
