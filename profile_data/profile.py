@@ -7,7 +7,7 @@ import xlsxwriter
 workbook = xlsxwriter.Workbook('t2.xlsx')
 edm = workbook.add_worksheet("ED_m")
 edc = workbook.add_worksheet("ED_c")
-scale = 100000
+scale = 1000
 row = 0
 col = 0
 

@@ -14,8 +14,10 @@ def createSSHClient(server, password):
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     if password.split(".")[1] == "pem":
         client.connect(server,username='ec2-user', key_filename=password)
-    else:
+    elif password.split(".")[1] == "johnny":
         client.connect(server,username='johnny')
+    else:
+        client.connect(server,username='dcsl-rasp1')
     client_scp = SCPClient(client.get_transport())
     return client_scp, client
 
@@ -23,7 +25,8 @@ def createSSHClient(server, password):
 scp_list=[]
 ssh_list=[]
 
-server_list = [("54.172.191.10","IBDASH_V2.pem"),("3.234.212.152","IBDASH_V2.pem"),("3.228.0.215","IBDASH_V2.pem")]
+#server_list = [("54.172.191.10","IBDASH_V2.pem"),("3.234.212.152","IBDASH_V2.pem"),("3.228.0.215","IBDASH_V2.pem")]
+server_list=[("128.46.74.156",".l")]
 for each in server_list:
     scp,ssh = createSSHClient(each[0],each[1])
     scp_list.append(scp)
@@ -38,8 +41,10 @@ for each in ssh_list:
 
 for each in scp_list:
     start = timer.time()
-    each.put("/home/jonny/Documents/Research/IBDASH_V2/governer.py")
-    each.put("/home/jonny/Documents/Research/IBDASH_V2/edge_list.json")
+    each.put("/home/jonny/Documents/Research/IBDASH_V2/profile_data/profile.py","/home/dcsl-rasp1/ibdash/")
+    each.put("/home/jonny/Documents/Research/IBDASH_V2/profile_data/lightgbm/pca.py","/home/dcsl-rasp1/ibdash/")
+    each.put("/home/jonny/Documents/Research/IBDASH_V2/profile_data/lightgbm/train.py","/home/dcsl-rasp1/ibdash/")
+    each.put("/home/jonny/Documents/Research/IBDASH_V2/profile_data/lightgbm/com_test.py","/home/dcsl-rasp1/ibdash/")
     end = timer.time()
     print("transfer time: {}".format(end-start))
 

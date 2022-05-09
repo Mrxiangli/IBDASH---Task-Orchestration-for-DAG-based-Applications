@@ -99,24 +99,25 @@ def BFS(edge_adj):
 					vert_dict[v]['anc'] = u
 					queue.append(v)
 		vert_dict[u]['color'] = 'black'
-	vert_dict['1']['color']="grey"
-	vert_dict['1']['dis']=0
-	vert_dict['1']['anc']=None
-	queue=[]
-	queue.append('1')
-	while queue:
-		u = queue.pop(0)
-		for v in edge_adj[u]:
-			if v != "end":
-				if vert_dict[v]['color'] == 'grey':
-					vert_dict[v]['dis'] = vert_dict[u]['dis'] + 1
-					vert_dict[v]['anc'] = u
-				if vert_dict[v]['color'] == 'white':
-					vert_dict[v]['color'] = 'grey'
-					vert_dict[v]['dis'] = vert_dict[u]['dis'] + 1
-					vert_dict[v]['anc'] = u
-					queue.append(v)
-		vert_dict[u]['color'] = 'black'
+	if '1' in edge_adj['s']:
+		vert_dict['1']['color']="grey"
+		vert_dict['1']['dis']=0
+		vert_dict['1']['anc']=None
+		queue=[]
+		queue.append('1')
+		while queue:
+			u = queue.pop(0)
+			for v in edge_adj[u]:
+				if v != "end":
+					if vert_dict[v]['color'] == 'grey':
+						vert_dict[v]['dis'] = vert_dict[u]['dis'] + 1
+						vert_dict[v]['anc'] = u
+					if vert_dict[v]['color'] == 'white':
+						vert_dict[v]['color'] = 'grey'
+						vert_dict[v]['dis'] = vert_dict[u]['dis'] + 1
+						vert_dict[v]['anc'] = u
+						queue.append(v)
+			vert_dict[u]['color'] = 'black'
 	return vert_dict	
 
 
@@ -257,6 +258,52 @@ def dependency_dic(app_data,task_dict):
 						else:
 							dependency_dic[int(depend_task)].append((main_task,task_dict[depend_task][2][main_task]))
 	return dependency_dic
+
+
+def update_background_tasks(task_types,backtrack_dic,ED_pred,ED_m,ED_c,ED_tasks,k,i,task,exe_only,t_pred):		
+	x=[]
+	for idx in range(task_types):					# go through all task types   overall time complexity V * ed * num*task_type
+		x.append(ED_tasks[idx][ED_pred][k+i])		
+	#print(f"x_before:{x}")
+	
+	# check the task on the device 
+	if sum(np.array(x)>0) > 0:									# only do backtrace when there is task being affected
+		for bt_task in backtrack_dic[ED_pred].keys():			# check what tasks are executing on the device
+			for each_instance in backtrack_dic[ED_pred][bt_task]:		#check the instance of the tasks
+
+				if each_instance[2] > k+i and each_instance[0] < k+i+t_pred:						# if the instance finish time is mroe than the current time, then it needs to be correct due to the new task
+					w=ED_m[ED_pred][bt_task*task_types:bt_task*task_types+task_types]
+					c=ED_c[ED_pred][bt_task*task_types:bt_task*task_types+task_types]
+					lock=0
+					if 	x[bt_task] > 0:
+						x[bt_task]-=1 		#remove the task that being affected 
+						lock=1
+					x[task]+=1	#add the new tasks
+	
+					if sum(np.array(x)>0) == 0:	# if no task is on the device
+						adjusted_time = c[task]
+					else:
+						adjusted_time = int(np.dot(w,x)+np.dot((np.array(x)>0),c)) 		# re-evaluate the time off the affected task with the new added task
+
+					extra_time=0
+					if adjusted_time > each_instance[1] - each_instance[0]: 			## adjusted time only calculated execution time, not the data transfer time, should add that as well then scale
+						#multiplier = adjusted_time/(each_instance[1] - each_instance[0])
+						#time_left = each_instance[2] - (k+i)
+						#extra_time = int((multiplier-1)*time_left)
+						extra_time=adjusted_time-(each_instance[1] - each_instance[0])
+				#		print(f"extra_time: {extra_time}")
+						for j in range(each_instance[2], each_instance[2]+extra_time):	
+							ED_tasks[bt_task][ED_pred][j]+=1	
+					if lock == 1:		
+						x[bt_task]+=1 			#add itself back to keep consistent
+					x[task]-=1    # remove the new one
+				#	print(f"x_after:{x}")
+					each_instance[1]=each_instance[0]+adjusted_time
+					each_instance[2]=each_instance[2]+extra_time
+
+	backtrack_dic[ED_pred][task].append([k+i,k+i+exe_only, k+i+t_pred])  #newly added keep tracking of the (start time, the execution only time, the end time)
+	return	ED_tasks, backtrack_dic
+
 
 def inputfile_dic(app_data):
 	inputdict={}
