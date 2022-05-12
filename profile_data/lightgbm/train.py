@@ -1,7 +1,7 @@
 import lightgbm as lgb
-import boto3
+#import boto3
 import numpy as np
-from boto3.s3.transfer import TransferConfig
+#from boto3.s3.transfer import TransferConfig
 import json
 import random
 import time
@@ -14,7 +14,7 @@ if __name__ =='__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--count', type=int, help='instance_count')
 	args = parser.parse_args()
-	start=timer.time()
+	start=timer.time()*1000
 	path_parent = os.getcwd()
 	file = "Digits_Train_Transform_{}.txt".format(args.count)
 	train_data = np.genfromtxt(os.path.join(path_parent,file),delimiter="\t")
@@ -56,5 +56,5 @@ if __name__ =='__main__':
 	acc = count_match/len(y_pred)
 	model_name="lightGBM_model_"+str(args.count) + ".txt"
 	gbm.save_model(model_name)
-	end=timer.time()
-	print("train1: "+str((end-start)/100))
+	end=timer.time()*1000
+	print("train1: "+str((end-start)//1000))

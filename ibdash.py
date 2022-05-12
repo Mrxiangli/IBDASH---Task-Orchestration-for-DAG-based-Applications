@@ -228,8 +228,8 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			#allocation={"0": [1], "1": [1], "2": [1]}
 			print(allocation)
 			print("instance cout start :{}".format(instance_count))
-			#get_times_stamp(instance_count)
-			#dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			get_times_stamp(instance_count)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
@@ -352,7 +352,7 @@ def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			schedule_time_petrel += end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			#dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_petrel.append(i/1000)
 			k=k+1
 			pf_petrel_av.append(tmp_pf_dic[task_types-1])
@@ -478,7 +478,7 @@ def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depen
 			schedule_time_lavea +=end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			#dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_lavea.append(i/1000)
 			k=k+1
 			pf_lavea_av.append(tmp_pf_dic[task_types-1])
@@ -589,7 +589,7 @@ def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict
 			schedule_time_rr += end_time- start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			#dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_rr.append(i/1000)
 			k=k+1
 			pf_rr_av.append(tmp_pf_dic[task_types-1])
@@ -693,7 +693,7 @@ def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			schedule_time_rd = end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			#dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_rd.append(i/1000)
 			k=k+1
 			pf_rd_av.append(tmp_pf_dic[task_types-1])
@@ -866,6 +866,7 @@ if __name__ =='__main__':
 	parser.add_argument('--pf', type=float, nargs="?", const=0.25, default=0.25,help='probability of falure threshold beta')
 	parser.add_argument('--rd', type=int, nargs="?", const=3, default=3,help='replication degree gamma')
 	parser.add_argument('--jp', type=float, nargs="?", const=0.5, default=0.5,help='joint optimization parameter alpha')
+	parser.add_argument('--sch', type=str, nargs="?", const="ibdash", default="ibdash",help='joint optimization parameter alpha')
 	args = parser.parse_args()
 
 	profile_data_path = os.path.join(os.getcwd(),"profile_data/")
@@ -894,9 +895,9 @@ if __name__ =='__main__':
 	# The following parameters can be used to tune the simulation
 	random.seed(0)
 	ntbd = 600						#network bandwidth
-	app_inst_time = 20				#the period of time that application instances might arrive
+	app_inst_time = 30				#the period of time that application instances might arrive
 	sim_time = 20000				#simulation period
-	num_arrivals = 10				#number of application instances arrived during app_ins_time	
+	num_arrivals = 20				#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
@@ -909,9 +910,11 @@ if __name__ =='__main__':
 	edge_list_ssh=[]
 	unavailable_edge = []
 	access_dict={}
-	access_dict[0]="3.228.0.215" #t2x
-	access_dict[1]="54.172.191.10" #t22x
-	access_dict[2]="3.234.212.152" #t3x
+	access_dict[0]="128.46.74.171" #nx1
+	access_dict[1]="128.46.74.172" #nx2
+	access_dict[2]="128.46.74.173" #nx3
+	#access_dict[3]="128.46.74.95" #agx
+	#access_dict[4]="128.46.32.175" #server
 	#access_dict[3]="128.46.32.175" #ashraf server
 	#access_dict[5]="44.204.119.25" #t22x
 
@@ -1010,8 +1013,8 @@ if __name__ =='__main__':
 	#building the cpu regression model and latency regression model for all edge devices
 	#===================== This piece of code is used for LaTS simulation, not necessary in the upcoming version
 
-	ed_cpu_regression = cpu_regression_setup(task_types,num_edge_max,app_path)
-	ed_latency_regression = latency_regression_setup(task_types,num_edge_max,EDmc_file)
+	#ed_cpu_regression = cpu_regression_setup(task_types,num_edge_max,app_path)
+	#ed_latency_regression = latency_regression_setup(task_types,num_edge_max,EDmc_file)
 
 	
 	
@@ -1033,7 +1036,8 @@ if __name__ =='__main__':
 		ED_c = np.array(pd.read_excel(EDmc_file,engine="openpyxl",sheet_name="edc",skiprows=0, nrows= num_edge))
 
 		#probabily of failure for each edge device (used expotential distribution for simulation)
-		lam2=[0.000000015, 0.00000011, 0.000000015, 0.000000024, 0.00000009, 0.000000032, 0.00000031, 0.00000001,0.0000015,0.0000015]   	#mix
+		#lam2=[0.000000015, 0.00000011, 0.000000015, 0.000000024, 0.00000009, 0.000000032, 0.00000031, 0.00000001,0.0000015,0.0000015]   	#mix
+		lam2 = [0,0,0,0,0,0,0,0,]
 		#lam2=[0.00015, 0.00011, 0.00015, 0.00024, 0.0009, 0.000032, 0.0001, 0.0009]   									#PED
 		#lam2=[0.000015, 0.000011, 0.000015, 0.000011, 0.000018, 0.000012, 0.00001, 0.00002]   							#CED
 
@@ -1064,20 +1068,25 @@ if __name__ =='__main__':
 		edge_info=dict()
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
+		if args.sch == "ibdash":
+			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		if args.sch == "petrel":
+			time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		if args.sch == "lavea":
+			time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		if args.sch == "rr":
+			time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		if args.sch == "rd":
+			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+		if args.sch == "lats":
+			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list, ed_cpu_regression,ed_latency_regression)
 
-		time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
-		time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
-		time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
-		time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
-		time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
-		time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list, ed_cpu_regression,ed_latency_regression)
-
-		print(f"service time ibdash: {average_service_time_ibdash}")
-		print(f"service time petrel: {average_service_time_petrel}")
-		print(f"service time lavea: {average_service_time_lavea}")
-		print(f"service time rr: {average_service_time_rr}")
-		print(f"service time rd: {average_service_time_rd}")
-		print(f"service time lats: {average_service_time_lats}")
+		#print(f"service time ibdash: {average_service_time_ibdash}")
+		#print(f"service time petrel: {average_service_time_petrel}")
+		#print(f"service time lavea: {average_service_time_lavea}")
+		#print(f"service time rr: {average_service_time_rr}")
+		#print(f"service time rd: {average_service_time_rd}")
+		#print(f"service time lats: {average_service_time_lats}")
 """
 		fig2, orch = plt.subplots(3,2,sharex=True)
 		fig2.tight_layout()

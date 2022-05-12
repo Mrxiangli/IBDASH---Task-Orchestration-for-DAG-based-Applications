@@ -20,7 +20,7 @@ if __name__ =='__main__':
 	parser.add_argument('--count', type=int, help='instance_count')
 	args = parser.parse_args()
 
-	start=timer.time()
+	start=timer.time()*1000
 	train_data = genfromtxt("Digits_Train.txt")
 	train_labels = train_data[:,0]
 
@@ -55,5 +55,5 @@ if __name__ =='__main__':
 	filename = "Digits_Train_Transform_"+str(args.count)+".txt"
 
 	savetxt(filename, first_n_A_label, delimiter="\t")
-	end=timer.time()
-	print("pca: "+str((end-start)/100))
+	end=timer.time()*1000
+	print("pca: "+str((end-start)//1000))

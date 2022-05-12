@@ -3,8 +3,8 @@ import configparser
 import json
 import subprocess
 import sys
-import paramiko
-from scp import SCPClient
+#import paramiko
+#from scp import SCPClient
 import errno
 import socket
 import os
@@ -42,15 +42,15 @@ def next_task(current_tk,depend_lookup,input_lookup):
 	return next_stage_dict
 
 #creat EC2 client for dispatching
-def createSSHClient(server, password):
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    if password.split(".")[1] == "pem":
-    	client.connect(server,username='ec2-user', key_filename=password)
-    else:
-    	client.connect(server,username='jonny', key_filename=password)
-    client_scp = SCPClient(client.get_transport())
-    return client_scp, client
+# def createSSHClient(server, password):
+#     client = paramiko.SSHClient()
+#     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+#     if password.split(".")[1] == "pem":
+#     	client.connect(server,username='ec2-user', key_filename=password)
+#     else:
+#     	client.connect(server,username='jonny', key_filename=password)
+#     client_scp = SCPClient(client.get_transport())
+#     return client_scp, client
 
 
 def send_files(s,filename):
@@ -163,15 +163,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 			print(f"{address} listening is alive")
 			msg_type = client_socket.recv(1).decode()
 			print(f"msg: {msg_type}")
-			# if msg_type == "F":
-			# 	received = client_socket.recv(NAME_SIZE).decode()
-			# 	filename, filesize, space = received.split(SEPARATOR)
-			# 	print(f"filename: {filename}")
-
-			# continue
-			# if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L":
-			# 	print(f"msg: {msg_type}")
-			# 	print(f"socket {client_socket} out of sync")
+			if msg_type == "T":
+				pass
 			if msg_type == 'F':
 				print("###########################################")
 				start = time.time()
@@ -189,14 +182,10 @@ def connection_listening_thread(client_socket,address, command_queue):
 				count = 0
 				bytes_read = b''
 				with open(filename, "wb") as f:
-					#bytes_read = client_socket.recv(filesize)
-					#print(len(bytes_read.decode()))
-					#print(len(bytes_read))
 					counter = 0
 					while (filesize - received_size) > BUFFER_SIZE:
 						bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
 						bytes_read+=bytes_read_chunk				
-						# received_size += len(bytes_read_chunk.decode())
 						received_size += len(bytes_read_chunk)
 						counter+=1
 					residue = filesize - received_size
@@ -204,24 +193,19 @@ def connection_listening_thread(client_socket,address, command_queue):
 					while residue > 0:
 						bytes_read_chunk = client_socket.recv(residue)
 						bytes_read += bytes_read_chunk
-						# received_size += len(bytes_read_chunk.decode())
 						received_size += len(bytes_read_chunk)
-						# if len(bytes_read.decode()) - residue == 0:
 						if len(bytes_read) - residue == 0:
 							break
 						else:
 							residue -= len(bytes_read_chunk)
-							# residue -= len(bytes_read_chunk.decode())
 
 					f.write(bytes_read)
 					end = time.time()
-					print(f"received_size {received_size}")
+
 					print(f"{filename} is received")
-					print(f"time: {end-start}")
 					if received_size == filesize:
 						bytes_read = client_socket.recv(4)
 						if bytes_read.decode() != "/EOF":
-							print(f"eof? {bytes_read.decode()}")
 							print(f" error transmitting {filename}")
 
 			elif msg_type == "C":
@@ -232,14 +216,12 @@ def connection_listening_thread(client_socket,address, command_queue):
 
 			elif msg_type == "L":
 				label= client_socket.recv(NAME_SIZE).decode()
-				#label=int(label.strip())
 				IDENTIFIER = int(label)
 				print(f"IDENTIFIER: {IDENTIFIER}")
 				CONNNECTION_EASTABLISHED = False
-				#command_queue.put(command)
-			
+	
 			else:
-				print(f'getting shitty packets')
+				print(f'transmisstion error')
 
 			# close the client socket
 			#client_socket.close()

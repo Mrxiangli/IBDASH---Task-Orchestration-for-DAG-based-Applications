@@ -1,5 +1,5 @@
 import lightgbm as lgb
-import boto3
+#import boto3
 import numpy as np
 import time
 import sys
@@ -15,7 +15,7 @@ if __name__ =='__main__':
 	args = parser.parse_args()
 
 
-	start=timer.time()
+	start=timer.time()*1000
 
 	num_models = 1
 
@@ -59,6 +59,6 @@ if __name__ =='__main__':
 	acc = count_match/len(y_pred)
 	result_file = "predict_" + str(args.count)+".txt"
 	savetxt(result_file, y_pred, delimiter="\t")
-	print("accuracy: {}".format(acc))
-	end=timer.time()
-	print("com_test "+str((end-start)/100))
+#	print("accuracy: {}".format(acc))
+	end=timer.time()*1000
+	print("com_test "+str((end-start)//1000))

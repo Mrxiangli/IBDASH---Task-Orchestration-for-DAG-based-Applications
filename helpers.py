@@ -523,3 +523,15 @@ def connection_listening_thread(client_socket,address):
 						print(f" error transmitting {filename}")
 
 	s.close()
+
+def send_test(ip):
+	LABEL_SIZE = 256
+	s.send("T".encode())
+	s.send(str(ip).ljust(LABEL_SIZE).encode())
+
+def network_test(devices_list):
+	p2p_test={}
+	# the last device in the deive list is orchestrator
+	for idx,each_device in enumerate(device_list):
+		if idx != length(device_list)-1:
+			send_test(each_device)
