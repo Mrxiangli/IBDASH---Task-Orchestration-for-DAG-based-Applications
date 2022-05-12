@@ -7,7 +7,7 @@ import xlsxwriter
 workbook = xlsxwriter.Workbook('t2.xlsx')
 edm = workbook.add_worksheet("ED_m")
 edc = workbook.add_worksheet("ED_c")
-scale = 1000
+scale = 1
 row = 0
 col = 0
 
@@ -41,8 +41,8 @@ for base_tk in base_tk_list:
 		mc_dic[profile_file]=z1
 	for each in prof_tk:
 		coef = mc_dic[each]
-		edm.write(row,col,int(coef[0]*scale))
-		edc.write(row,col,int(coef[1]*scale))
+		edm.write(row,col,round(coef[0]*scale,0))
+		edc.write(row,col,round(coef[1]*scale,0))
 		col+=1
 workbook.close()			
 
