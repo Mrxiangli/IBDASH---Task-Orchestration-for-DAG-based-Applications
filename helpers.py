@@ -22,6 +22,8 @@ import time
 from threading import Thread
 import threading
 from queue import Queue
+from icmplib import ping, multiping
+import global_var
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -423,12 +425,15 @@ def send_command(s,msg):
 	s.send("C".encode())
 	s.send(msg.ljust(MSG_SIZE).encode())
 
-
 def send_label(s,label):
 	LABEL_SIZE = 256
 	print(label)
 	s.send("L".encode())
 	s.send(str(label).ljust(LABEL_SIZE).encode())
+
+def send_ntwk_test(s):
+	LABEL_SIZE = 256
+	s.send("P".encode())
 
 # interleaveing issue!
 def connection_creation_thread(connection_queue):
@@ -465,7 +470,7 @@ def spawn_listening_thread(connection_queue):
 			Thread(target = connection_listening_thread, args=(client_socket,address)).start() #for each socket creating a listening thread
 
 def connection_listening_thread(client_socket,address):
-	global IDENTIFIER
+	global ntwk_matrix
 	BUFFER_SIZE = 65536
 	NAME_SIZE = 256
 	LABEL_SIZE = 256
@@ -475,10 +480,16 @@ def connection_listening_thread(client_socket,address):
 
 	while True:
 		msg_type = client_socket.recv(1).decode()
-		if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L":
+		if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L" and msg_type != "T":
 			print(f"msg: {len(msg_type)}")
 			print(f"msg: {msg_type}")
 			print(f"socket {client_socket} out of sync")
+		if msg_type == 'T':
+			received = client_socket.recv(NAME_SIZE).decode()
+			print(f"This is the identifier : {received}")
+			received = client_socket.recv(NAME_SIZE).decode()
+			print(f"This is the actual test result {received}")
+			print(global_var.ntwk_matrix)
 		if msg_type == 'F':
 			start = time.time()
 			received = client_socket.recv(NAME_SIZE).decode()
@@ -521,17 +532,30 @@ def connection_listening_thread(client_socket,address):
 					bytes_read = client_socket.recv(4)
 					if bytes_read.decode() != "/EOF":
 						print(f" error transmitting {filename}")
+			print(f"{filename} is received at {time.time()}")
 
 	s.close()
 
-def send_test(ip):
-	LABEL_SIZE = 256
-	s.send("T".encode())
-	s.send(str(ip).ljust(LABEL_SIZE).encode())
-
-def network_test(devices_list):
+def network_test(device_list):
 	p2p_test={}
+	for idx,ip_address in enumerate(device_list):
+		result = ping(ip_address,count=5,payload_size=1024,privileged=False)
+		p2p_test[idx]=((1024/(result.avg_rtt/2))*1000)/1000000
+	return p2p_test
 	# the last device in the deive list is orchestrator
-	for idx,each_device in enumerate(device_list):
-		if idx != length(device_list)-1:
-			send_test(each_device)
+
+def create_ntwk_matrix(num_edge):
+	ntwk_matrix = [[0 for i in range(num_edge)] for j in range(num_edge)]
+	for i in range(num_edge):
+		ntwk_matrix[i][i]=-1
+	return ntwk_matrix 
+
+def ntwk_matrix_update(ntwk_dic,ntwk_matrix, identifier):
+	# extract all transmisson speed from the orchestator initiated test
+	total_device = len(ntwk_dic.keys())
+	for j in range(0,total_device-1):
+		if identifier==j:
+			ntwk_matrix[identifier][j]=-1
+		else:
+			ntwk_matrix[identifier][j]=ntwk_dic[j]
+	return ntwk_matrix

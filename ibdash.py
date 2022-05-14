@@ -26,9 +26,9 @@ from sklearn.preprocessing import PolynomialFeatures
 from pathlib import Path
 from threading import Thread
 from queue import Queue
+from icmplib import multiping
+import global_var 
 pp = pprint.PrettyPrinter(indent=4)
-
-IDENTIFIER = -1
 
 
 def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
@@ -869,11 +869,14 @@ if __name__ =='__main__':
 	parser.add_argument('--sch', type=str, nargs="?", const="ibdash", default="ibdash",help='joint optimization parameter alpha')
 	args = parser.parse_args()
 
+	global_var.initialize()
+
 	profile_data_path = os.path.join(os.getcwd(),"profile_data/")
 	app_path = os.path.join(profile_data_path,args.app)
 	app_json = os.path.join(app_path,'app_config.json')
 	connection_q = Queue()
 
+	
 	# Opening JSON file that contains the application dag
 	f = open(app_json) 
 	app_data, original_dag, linear_dags, vertices, edge_adj = dag_linearization(f)
@@ -909,16 +912,23 @@ if __name__ =='__main__':
 	edge_list_scp=[]
 	edge_list_ssh=[]
 	unavailable_edge = []
+	device_list=[]
 	access_dict={}
 	access_dict[0]="128.46.74.171" #nx1
 	access_dict[1]="128.46.74.172" #nx2
 	access_dict[2]="128.46.74.173" #nx3
+	#access_dict[3]="54.172.191.10" #nx3
 	#access_dict[3]="128.46.74.95" #agx
 	#access_dict[4]="128.46.32.175" #server
 	#access_dict[3]="128.46.32.175" #ashraf server
-	#access_dict[5]="44.204.119.25" #t22x
+	#access_dict[5]="44.204.119.25" #t22
 
+	global_var.IDENTIFIER = num_edge_max
 	access_dict[3]="128.46.73.218"
+	for each in access_dict.keys():
+		device_list.append(access_dict[each])
+
+
 	socket_list = []
 	for i in range(num_edge_max):
 		s = socket_connections(access_dict[i],5001)
@@ -941,7 +951,6 @@ if __name__ =='__main__':
 #			access_dict.pop(i)
 #			unavailable_edge.append(i)
 
-#	sys.exit()
 
 	dependency_file = "dependency_file.json"
 	with open(dependency_file,'w') as depend_file:
@@ -983,9 +992,15 @@ if __name__ =='__main__':
 #		edge_list_ssh.append(client_ssh)
 	#send_files(socket_list[0],"/home/jonny/Documents/Research/IBDASH_V2/Digits_Train_Transform_1.txt")
 	#sys.exit()
+
+	ntwk_test=network_test(device_list)
+	global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
+	global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
+
 	for idx,each in enumerate(socket_list):
 		send_label(socket_list[idx],idx)
 		send_files(socket_list[idx],edge_list)
+		send_ntwk_test(socket_list[idx])
 	for idx,each in enumerate(socket_list):
 		send_files(socket_list[idx],dependency_file)
 		send_files(socket_list[idx],task_file)
@@ -998,7 +1013,13 @@ if __name__ =='__main__':
 		#each.put(input_lp)
 		#each.put(output_lp)
 		#each.put("governer.py")
-		
+	
+
+
+	#print(ntwk_test)
+	#print(ntwk_matrix)
+	#while True:
+	#	pass
 
 	#generate the random task arrival time 
 	task_time = np.array(sorted(random.sample(range(1,app_inst_time),num_arrivals)))
@@ -1016,7 +1037,6 @@ if __name__ =='__main__':
 	#ed_cpu_regression = cpu_regression_setup(task_types,num_edge_max,app_path)
 	#ed_latency_regression = latency_regression_setup(task_types,num_edge_max,EDmc_file)
 
-	
 	
 	pf_petrel_av=[]
 	pf_lavea_av=[]
