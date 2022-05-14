@@ -13,9 +13,11 @@ from queue import PriorityQueue, Queue
 import time
 import threading
 import ast
+from icmplib import ping, multiping
+from multiprocessing import Process
 
 IDENTIFIER = -1
-
+device_list=[]
 
 
 lock = threading.Lock()
@@ -41,6 +43,11 @@ def next_task(current_tk,depend_lookup,input_lookup):
 			next_stage_dict[each] = next_file
 	return next_stage_dict
 
+def network_speed_test(device_list):
+	p2p_test=network_test(device_list)
+	print(socket_list[-1])
+	send_ntwk_test(socket_list[-1],p2p_test,IDENTIFIER)
+
 #creat EC2 client for dispatching
 # def createSSHClient(server, password):
 #     client = paramiko.SSHClient()
@@ -51,7 +58,13 @@ def next_task(current_tk,depend_lookup,input_lookup):
 #     	client.connect(server,username='jonny', key_filename=password)
 #     client_scp = SCPClient(client.get_transport())
 #     return client_scp, client
-
+def network_test(device_list):
+	p2p_test={}
+	for idx,ip_address in enumerate(device_list):
+		result = ping(ip_address,count=5,payload_size=1024,privileged=False)
+		print(f"avg_rtt:{result.avg_rtt}")
+		p2p_test[idx]=round(((1024/(result.avg_rtt/2))*1000)/1000000,2)
+	return p2p_test
 
 def send_files(s,filename):
 	global lock
@@ -59,6 +72,7 @@ def send_files(s,filename):
 	BUFFER_SIZE = 65536 # send 4096 bytes each time step
 	NAME_SIZE = 256
 	filesize = os.path.getsize(filename)
+	print(f"{filename} is send at {time.time()}")
 	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
 	lock.acquire()
 	s.send("F".encode())
@@ -78,6 +92,37 @@ def send_files(s,filename):
 	s.send("/EOF".encode())
 	lock.release()
 
+def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
+	#Receiving files
+	received_size = 0
+	count = 0
+	bytes_read = b''
+	with open(filename, "wb") as f:
+		counter = 0
+		while (filesize - received_size) > BUFFER_SIZE:
+			bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
+			bytes_read+=bytes_read_chunk				
+			received_size += len(bytes_read_chunk)
+			counter+=1
+		residue = filesize - received_size
+
+		while residue > 0:
+			bytes_read_chunk = client_socket.recv(residue)
+			bytes_read += bytes_read_chunk
+			received_size += len(bytes_read_chunk)
+			if len(bytes_read) - residue == 0:
+				break
+			else:
+				residue -= len(bytes_read_chunk)
+
+		f.write(bytes_read)
+		end = time.time()
+
+		print(f"{filename} is received")
+		if received_size == filesize:
+			bytes_read = client_socket.recv(4)
+			if bytes_read.decode() != "/EOF":
+				print(f" error transmitting {filename}")
 
 def send_command(s,msg):
 	SEPARATOR = "<SEPARATOR>"
@@ -88,6 +133,16 @@ def send_command(s,msg):
 	lock.acquire()
 	s.send("C".encode())
 	s.send(msg.ljust(MSG_SIZE).encode())
+	lock.release()
+
+def send_ntwk_test(s,p2p_test,identifier):
+	BUFFER_SIZE = 4096 # send 4096 bytes each time step
+	MSG_SIZE = 256
+	global lock
+	lock.acquire()
+	s.send("T".encode())
+	s.send(str(identifier).ljust(MSG_SIZE).encode())
+	s.send(str(p2p_test).ljust(MSG_SIZE).encode())
 	lock.release()
 
 
@@ -145,6 +200,7 @@ def spawn_command_thread(command_queue,socket_list):
 def connection_listening_thread(client_socket,address, command_queue):
 	global IDENTIFIER
 	global CONNNECTION_EASTABLISHED
+	global device_list
 	BUFFER_SIZE = 65536
 	NAME_SIZE = 256
 	LABEL_SIZE = 256
@@ -163,8 +219,11 @@ def connection_listening_thread(client_socket,address, command_queue):
 			print(f"{address} listening is alive")
 			msg_type = client_socket.recv(1).decode()
 			print(f"msg: {msg_type}")
-			if msg_type == "T":
-				pass
+			if msg_type == "P":
+				p = Process(target=network_speed_test, args=(device_list,))
+				p.start()
+				p.join()
+
 			if msg_type == 'F':
 				print("###########################################")
 				start = time.time()
@@ -176,38 +235,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 				# convert to integer
 				filesize = int(filesize)
 				print(f"filesize {filesize}")
+				receive_files(filesize,BUFFER_SIZE,filename,client_socket)
 				
-				#Receiving files
-				received_size = 0
-				count = 0
-				bytes_read = b''
-				with open(filename, "wb") as f:
-					counter = 0
-					while (filesize - received_size) > BUFFER_SIZE:
-						bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
-						bytes_read+=bytes_read_chunk				
-						received_size += len(bytes_read_chunk)
-						counter+=1
-					residue = filesize - received_size
-
-					while residue > 0:
-						bytes_read_chunk = client_socket.recv(residue)
-						bytes_read += bytes_read_chunk
-						received_size += len(bytes_read_chunk)
-						if len(bytes_read) - residue == 0:
-							break
-						else:
-							residue -= len(bytes_read_chunk)
-
-					f.write(bytes_read)
-					end = time.time()
-
-					print(f"{filename} is received")
-					if received_size == filesize:
-						bytes_read = client_socket.recv(4)
-						if bytes_read.decode() != "/EOF":
-							print(f" error transmitting {filename}")
-
 			elif msg_type == "C":
 				command = client_socket.recv(MSG_SIZE).decode()
 				priority=ast.literal_eval(command)[0]
@@ -346,7 +375,7 @@ if __name__ =='__main__':
 		
 	except:
 		print("ERROR")
-	
+
 	edge_list = json_file_loader("edge_list.json")
 	for i in range(len(edge_list.keys())):
 		socket_list.append(None)
@@ -365,10 +394,22 @@ if __name__ =='__main__':
 			socket_list[ident]=s
 			connection_q.put([s,edge_list[str(i)]]) # this should put 
 
+	
+	for each_key in edge_list.keys():
+		device_list.append(edge_list[each_key])
+
+	#network_speed_test(device_list)
 
 
 	command_thread.start()
 	CONNNECTION_EASTABLISHED = True
+
+	#time.sleep(3)
+
+	#send_files(socket_list[-1],"test.opt")
+
+	#while True:
+	#	pass
 
 	#the listening thread is not created
 
