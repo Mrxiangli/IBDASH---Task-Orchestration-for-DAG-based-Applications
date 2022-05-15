@@ -14,11 +14,11 @@ import random
 import json
 import subprocess
 import time as timer
+import ast
 
 from helpers import *
-#from helpers import insert_edge_device, insert_task, app_stage, task_info, cpu_regression_setup,latency_regression_setup,dag_linearization,dependency_dic, inputfile_dic, dependency_lookup, inputfile_lookup, output_lookup, get_times_stamp, ping_test, send_files, socket_connections,send_label,connection_creation_thread,spawn_listening_thread,connection_listening_thread,update_background_tasks
 from helpers import plot as dagplot
-from dispatcher import dispatch, createSSHClient
+from dispatcher import dispatch
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from sklearn import linear_model
@@ -116,14 +116,16 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 							if task_dict[each_task][1] not in model_info[j]:
 									model_upload_t = math.ceil(task_dict[each_task][1][1]/ntbd)
 								#add the data transfer time
+						print(f" depend dic: {dependency_dic}")
 						if dependency_dic[int(each_task)] != [None]:
 							for each_dep in dependency_dic[int(each_task)]:
 								if each_dep[1] == 1:
+									print(f"task {each_task} depends on {each_dep}, which is located at {allocation[each_dep[0]]}")
 									# obtain the result size, using a fixed size for testing
 									data_trans_tmp = math.ceil(600000/ntbd)
 									if	data_trans_tmp > data_trans_t:
 										data_trans_t = data_trans_tmp
-
+						#sys.exit()
 						predict_time = predict_time + model_upload_t + data_trans_t
 						#print(f"total time: {predict_time}")
 						if predict_time < t_pred:		
@@ -159,19 +161,10 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 						longest_task_time_norm=t_pred_norm
 
 					ED_tasks, backtrack_dic=update_background_tasks(task_types,backtrack_dic,ED_pred,ED_m,ED_c,ED_tasks,k,i,task,exe_only, t_pred)
-					#print(f"backtrack dic: {backtrack_dic}")
-					#	print(ED_tasks)
-
 
 					# update the tasks running on each edge device	
 					for j in range(k+i, k+i+t_pred):	
 						ED_tasks[task][ED_pred][j]+=1
-				#	print(f"k+i: {k+i}")
-				#	print(f"k+i+pred: {k+i+t_pred}")
-
-
-
-				#	print(ED_tasks)
 
 					parent_all_success = 1
 					#Calculating the probability of current placement
@@ -189,7 +182,6 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 						ProbF = 1-parent_all_success*(1-sum(pf_ed[ED_pred][task_time[0]:task_time[0]+i+t_pred]))
 						tmp_pf_dic[task] = ProbF
 
-					#print("PF for task {} at initial schedue on edge {}: {}. The latency is t_pred: {}".format(task,ED_pred,ProbF,t_pred))
 					#weighed decision
 					weighted_decision = weight*t_pred_norm+(1-weight)*ProbF
 					replication = 0
@@ -222,12 +214,10 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				i=i+longest_task_time	# tracking the end to end latency
 				i_norm = i_norm + longest_task_time_norm
 
-
-
 			dispatcher_dic[instance_count]=allocation
 			#allocation={"0": [1], "1": [1], "2": [1]}
-			print(allocation)
-			print("instance cout start :{}".format(instance_count))
+			print(f"task allocation for instance {instance_count} : {allocation}")
+			print(f"instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_ibdash.append(i/1000)
@@ -352,7 +342,7 @@ def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			schedule_time_petrel += end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic,socket_list,non_meta_files)
 			service_time_petrel.append(i/1000)
 			k=k+1
 			pf_petrel_av.append(tmp_pf_dic[task_types-1])
@@ -887,32 +877,31 @@ if __name__ =='__main__':
 
 	dependency_dic=dependency_dic(app_data,task_dict)
 	depend_lookup=dependency_lookup(app_data)
+	print(dependency_dic)
 	inputfile_dic=inputfile_dic(app_data)
 	input_lookup=inputfile_lookup(app_data)
 	output_lookup=output_lookup(app_data)
+	print(inputfile_dic)
+	print(output_lookup)
 	task_file_dic={} #use this dictionary to track the file need to be used in each task
 	for task in app_data['Application']['Vertices']:
 		task_file_dic[task['name']]=task['file'][0]
 
+	print(task_file_dic)
 	EDmc_file=os.path.join(app_path,args.mc) # this file has the (m,c) value pairs and should be updated dynamically later on
 	# The following parameters can be used to tune the simulation
 	random.seed(0)
-	ntbd = 600						#network bandwidth
-	app_inst_time = 30				#the period of time that application instances might arrive
-	sim_time = 20000				#simulation period
-	num_arrivals = 20				#number of application instances arrived during app_ins_time	
+	ntbd = 600							#network bandwidth
+	app_inst_time = 30					#the period of time that application instances might arrive
+	sim_time = 20000					#simulation period
+	num_arrivals = 20					#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
 	num_edge_max = 3					#number of edge devices in DAG
 
-	#Thread(target = connection_creation_thread, args = (connection_q,)).start()	# constantly colleccting all incoming connections and put them in a connection q
-	#Thread(target = spawn_listening_thread, args=(connection_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 
-	edge_list_scp=[]
-	edge_list_ssh=[]
-	unavailable_edge = []
-	device_list=[]
+	global_var.device_list=[]
 	access_dict={}
 	access_dict[0]="128.46.74.171" #nx1
 	access_dict[1]="128.46.74.172" #nx2
@@ -925,101 +914,37 @@ if __name__ =='__main__':
 
 	global_var.IDENTIFIER = num_edge_max
 	access_dict[3]="128.46.73.218"
+
 	for each in access_dict.keys():
-		device_list.append(access_dict[each])
+		global_var.device_list.append(access_dict[each])
 
 
-	socket_list = []
+	global_var.socket_list = []
 	for i in range(num_edge_max):
 		s = socket_connections(access_dict[i],5001)
-		socket_list.append(s)
+		global_var.socket_list.append(s)
 	for i in range(num_edge_max):
-		Thread(target = connection_listening_thread, args=(socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
-
-	#for i in range(num_edge_max):
-
-	#	connection = socket_connections(access_dict[i],5001)
-	#	socket_list.append(connection)
-
-	#access_dict[1]="ec2-3-239-208-120.compute-1.amazonaws.com"
-	#access_dict[2]="ec2-3-234-212-152.compute-1.amazonaws.com"
-	#access_dict[3]="128.46.73.218"
-
-	#for i in range(num_edge_max):
-#		availibility = ping_test(access_dict[i])
-#		if availibility == -1:
-#			access_dict.pop(i)
-#			unavailable_edge.append(i)
+		Thread(target = connection_listening_thread, args=(global_var.socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 
 
-	dependency_file = "dependency_file.json"
-	with open(dependency_file,'w') as depend_file:
-		depend_file.write(json.dumps(dependency_dic))
-	depend_file.close()
+	dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list=loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,task_file_dic,access_dict)
 
-	task_file = "task_file.json"
-	with open(task_file,'w') as tk_file:
-		tk_file.write(json.dumps(task_file_dic))
-	tk_file.close()
 
-	dependency_lookup = "depend_lookup.json"
-	with open(dependency_lookup,'w') as lk_file:
-		lk_file.write(json.dumps(depend_lookup))
-	lk_file.close()
-
-	input_lp = "input_lookup.json"
-	with open(input_lp,'w') as lp_file:
-		lp_file.write(json.dumps(input_lookup))
-	lp_file.close()
-
-	output_lp = "output_lookup.json"
-	with open(output_lp,'w') as op_file:
-		op_file.write(json.dumps(output_lookup))
-	op_file.close()
-
-	edge_list = "edge_list.json"
-	with open(edge_list,'w') as edge_file:
-		edge_file.write(json.dumps(access_dict))
-	edge_file.close()
-
-#	for i in range(4):
-#		if i < 3:
-#			client_scp, client_ssh = createSSHClient(access_dict[i],"IBDASH_V2.pem")#
-#			client_ssh.exec_command("source ~/.bashrc")
-#		else:
-#			client_scp, client_ssh = createSSHClient(access_dict[i],"id_rsa.pub" )
-#		edge_list_scp.append(client_scp)
-#		edge_list_ssh.append(client_ssh)
-	#send_files(socket_list[0],"/home/jonny/Documents/Research/IBDASH_V2/Digits_Train_Transform_1.txt")
-	#sys.exit()
-
-	ntwk_test=network_test(device_list)
+	#ntwk_test=network_test()
 	global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
-	global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
+	#global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
 
-	for idx,each in enumerate(socket_list):
-		send_label(socket_list[idx],idx)
-		send_files(socket_list[idx],edge_list)
-		send_ntwk_test(socket_list[idx])
-	for idx,each in enumerate(socket_list):
-		send_files(socket_list[idx],dependency_file)
-		send_files(socket_list[idx],task_file)
-		send_files(socket_list[idx],dependency_lookup)
-		send_files(socket_list[idx],input_lp)
-		send_files(socket_list[idx],output_lp)
-		#each.put(dependency_file)
-		#each.put(task_file)
-		#each.put(dependency_lookup)
-		#each.put(input_lp)
-		#each.put(output_lp)
-		#each.put("governer.py")
-	
+	for idx,each in enumerate(global_var.socket_list):
+		send_label(global_var.socket_list[idx],idx)
+		send_files(global_var.socket_list[idx],edge_list)
+	for idx,each in enumerate(global_var.socket_list):
+		send_files(global_var.socket_list[idx],dependency_file)
+		send_files(global_var.socket_list[idx],task_file)
+		send_files(global_var.socket_list[idx],dependency_lookup)
+		send_files(global_var.socket_list[idx],input_lp)
+		send_files(global_var.socket_list[idx],output_lp)
 
-
-	#print(ntwk_test)
-	#print(ntwk_matrix)
-	#while True:
-	#	pass
+	periodic_network_test()
 
 	#generate the random task arrival time 
 	task_time = np.array(sorted(random.sample(range(1,app_inst_time),num_arrivals)))
@@ -1089,17 +1014,17 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 		if args.sch == "ibdash":
-			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
 		if args.sch == "petrel":
-			time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+			time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
 		if args.sch == "lavea":
-			time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+			time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
 		if args.sch == "rr":
-			time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+			time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
 		if args.sch == "rd":
-			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list)
+			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
 		if args.sch == "lats":
-			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, socket_list, ed_cpu_regression,ed_latency_regression)
+			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list, ed_cpu_regression,ed_latency_regression)
 
 		#print(f"service time ibdash: {average_service_time_ibdash}")
 		#print(f"service time petrel: {average_service_time_petrel}")
