@@ -31,7 +31,7 @@ import global_var
 pp = pprint.PrettyPrinter(indent=4)
 
 
-def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
+def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup):
 	######### IBOT-PI ######### 
 	
 	pf_ibdash_av=[]
@@ -66,6 +66,8 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 	dispatcher_dic = {}
 	non_meta_files = {}			#tracking the non-meta-file on each device
 	ntbd = 60
+
+	meta_file_history_size={}	# tracking the metafile history size for transmission estimation
 
 	#print(vert_stage)
 	start_orch = timer.time()
@@ -114,18 +116,39 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 						#print(f"exe_only {exe_only}")
 						if task_dict[each_task][1][0]!="NULL":		# if a model is needed
 							if task_dict[each_task][1] not in model_info[j]:
-									model_upload_t = math.ceil(task_dict[each_task][1][1]/ntbd)
+									model_upload_t = math.ceil(task_dict[each_task][1][1]/ntbd)			# ntbd need to be replaced with current network downloading speed
 								#add the data transfer time
 						
 						print(f" depend dic: {dependency_dic}")
+						# obtain the input file for the current task 
+						inputfile_current_task=[]
+						for each_inputfile in inputfile_dic[str(task)]:
+							inputfile_current_task.append(each_inputfile[0])
+
+						# potentially this part has bugs
 						if dependency_dic[int(each_task)] != [None]:
 							for each_dep in dependency_dic[int(each_task)]:
-								if each_dep[1] == 1:
-									print(f"task {each_task} depends on {each_dep}, which is located at {allocation[each_dep[0]]}")
-									# obtain the result size, using a fixed size for testing
-									data_trans_tmp = math.ceil(600000/ntbd)
-									if	data_trans_tmp > data_trans_t:
-										data_trans_t = data_trans_tmp
+								if each_dep[1] == 1:		# indicate data dependency exists is its 1
+									# currently no replication is considered
+									print(f"task {each_task} depends on task {each_dep}, which is located at {allocation[each_dep[0]]}")
+									transfer_speed=global_var.ntwk_matrix[allocation[each_dep[0]][0]][j] # obtain the transfer speed
+									print(f"transfer speed from {allocation[each_dep[0]][0]} to {j}: {transfer_speed}")
+									if transfer_speed == -1 or instance_count == 0:
+										pass
+									else:
+										# obtain the result size
+										tmp_size = 0
+										for out_file in output_lookup[each_dep[0]]:
+											if out_file[0] in inputfile_current_task:
+												filename = out_file[0]+str(instance_count-1)+out_file[2]
+												filesize = 1900000/1000000
+												print(f" filename: {filename}, size :{filesize}")
+												if filesize > tmp_size:
+													tmp_size = filesize
+										if transfer_speed !=0:
+											data_trans_t = math.ceil(tmp_size/transfer_speed)
+										# if	data_trans_tmp > data_trans_t:
+										# 	data_trans_t = data_trans_tmp
 						#sys.exit()
 						predict_time = predict_time + model_upload_t + data_trans_t
 						#print(f"total time: {predict_time}")
@@ -243,7 +266,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			load_ed[i] = np.add(load_ed[i],ED_tasks[j][i])
 	return time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av, load_ed, dispatcher_dic
 
-def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
+def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup):
 
 	########## Petrel ############
 	# a dictionary that used to track the available models on each edge device	
@@ -362,7 +385,7 @@ def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 
 	return time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av, load_ed_petrel
 
-def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):	
+def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup):	
 	# a dictionary that used to track the available models on each edge device	
 	model_info=dict()
 	for i in range(num_edge):
@@ -488,7 +511,7 @@ def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depen
 	return time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av, load_ed_lavea
 
 
-def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
+def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup):
 	########## Round Robin ############
 
 	model_info=dict()
@@ -598,7 +621,7 @@ def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict
 			load_ed_rr[i] = np.add(load_ed_rr[i],ED_tasks[j][i])
 	return time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av, load_ed_rr
 
-def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list):
+def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup):
 	########## Random ############
 
 	model_info=dict()
@@ -875,7 +898,7 @@ if __name__ =='__main__':
 	dagplot(original_dag)
 	vert_dict, vert_stage = app_stage(edge_adj)
 	task_types = len(task_dict)-1
-
+	print(task_dict)
 	dependency_dic=dependency_dic(app_data,task_dict)
 	depend_lookup=dependency_lookup(app_data)
 	print(dependency_dic)
@@ -1015,15 +1038,15 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 		if args.sch == "ibdash":
-			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
+			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "petrel":
-			time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
+			time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lavea":
-			time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
+			time_x_lavea, average_service_time_lavea, service_time_x_lavea, pf_lavea_av,load_ed_lavea=run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "rr":
-			time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
+			time_x_rr, average_service_time_rr, service_time_x_rr, pf_rr_av,load_ed_rr=run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "rd":
-			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list)
+			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lats":
 			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list, ed_cpu_regression,ed_latency_regression)
 
