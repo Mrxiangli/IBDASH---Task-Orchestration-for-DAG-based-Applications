@@ -30,7 +30,7 @@
         "name": "1",
         "file" : ["train.py",15],
         "model": ["conv", 1200],
-        "depend":{"0":0},
+        "depend":{"0":1},
         "input":[["Digits_Train_Transform_",1,".txt"]],
         "output":[["lightGBM_model_",1,".txt",2]],
         "param":{

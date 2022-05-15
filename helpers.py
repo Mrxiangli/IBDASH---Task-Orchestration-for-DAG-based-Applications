@@ -24,6 +24,7 @@ import threading
 from queue import Queue
 from icmplib import ping, multiping
 import global_var
+import ast
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -330,11 +331,11 @@ def inputfile_lookup(app_data):
 	return input_lookup
 
 def output_lookup(app_data):
-	oput_lookup={}
+	output={}
 	for each in app_data['Application']['Vertices']:
 		if each['name']!="s" and each['name']!='end':
-			oput_lookup[each['name']] = each['output']
-	return oput_lookup
+			output[each['name']] = each['output']
+	return output
 
 def get_times_stamp(app_instance):
 	time_file = open("time.txt","a")
@@ -372,50 +373,15 @@ def send_files(s,filename):
 	NAME_SIZE = 256
 
 	filesize = os.path.getsize(filename)
-	#print(filename)
 	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
-	#print(name))
-	print(filename)
+	print(f"sending {filename}")
 	s.send("F".encode())
 	s.send(name)
-	#return
 
-	#progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
-	counter = 0
 	with open(filename, "rb") as f:
 		bytes_read = f.read(filesize)
-		#print(bytes_read)
-		# s.sendall(bytes_read[: :BUFFER_SIZE])
-
-		start = time.time()
 		s.sendall(bytes_read)
-		# for i in range(int((filesize/BUFFER_SIZE)+1)):
-		# #for i in range(200):
-		# 	# read the bytes from the file
-		# 	# print(sys.getsizeof(bytes_read[i*BUFFER_SIZE : (i+1)* BUFFER_SIZE: BUFFER_SIZE]))
-		# 	# print(sys.getsizeof(bytes_read[:: BUFFER_SIZE]))
-		# 	# temp_byte = bytes_read[i*BUFFER_SIZE : (i+1)* BUFFER_SIZE]
-		# 	#pdb.set_trace()
-		# 	if not bytes_read:
-		# 		pdb.set_trace()
-		# 		# file transmitting is done
-		# 	 #   break
-		# 	# we use sendall to assure transimission in 
-		# 	# busy networks
-		# 	# s.sendall(bytes_read[i*BUFFER_SIZE : (i+1)* BUFFER_SIZE])
-		# 	s.sendall(bytes_read[: :BUFFER_SIZE])
-		# 	#print("lol")
-		# 	# update the progress bar
-		# 	#progress.update(len(bytes_read))
-
-		# 	# counter+=1;
-		# 	print(i)
-		end = time.time()
-		print(f"{filename}:finishing done: {end-start}")
 	s.send("/EOF".encode())
-	# close the socket
-	#s.close()
-	#print("closed socket")
 
 
 def send_command(s,msg):
@@ -427,7 +393,6 @@ def send_command(s,msg):
 
 def send_label(s,label):
 	LABEL_SIZE = 256
-	print(label)
 	s.send("L".encode())
 	s.send(str(label).ljust(LABEL_SIZE).encode())
 
@@ -485,11 +450,15 @@ def connection_listening_thread(client_socket,address):
 			print(f"msg: {msg_type}")
 			print(f"socket {client_socket} out of sync")
 		if msg_type == 'T':
-			received = client_socket.recv(NAME_SIZE).decode()
-			print(f"This is the identifier : {received}")
-			received = client_socket.recv(NAME_SIZE).decode()
-			print(f"This is the actual test result {received}")
-			print(global_var.ntwk_matrix)
+			received_id = client_socket.recv(NAME_SIZE).decode()
+			test_result = client_socket.recv(NAME_SIZE).decode()
+			p2p_result=ast.literal_eval(test_result)
+			for key in p2p_result.keys():
+				if key == int(received_id):
+					pass
+				else:
+					global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
+
 		if msg_type == 'F':
 			start = time.time()
 			received = client_socket.recv(NAME_SIZE).decode()
@@ -536,11 +505,11 @@ def connection_listening_thread(client_socket,address):
 
 	s.close()
 
-def network_test(device_list):
+def network_test():
 	p2p_test={}
-	for idx,ip_address in enumerate(device_list):
+	for idx,ip_address in enumerate(global_var.device_list):
 		result = ping(ip_address,count=5,payload_size=1024,privileged=False)
-		p2p_test[idx]=((1024/(result.avg_rtt/2))*1000)/1000000
+		p2p_test[idx]=round(((1024/(result.avg_rtt/2))*1000)/1000000,2)
 	return p2p_test
 	# the last device in the deive list is orchestrator
 
@@ -559,3 +528,43 @@ def ntwk_matrix_update(ntwk_dic,ntwk_matrix, identifier):
 		else:
 			ntwk_matrix[identifier][j]=ntwk_dic[j]
 	return ntwk_matrix
+
+def loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,task_file_dic,access_dict):
+	dependency_file = "dependency_file.json"
+	with open(dependency_file,'w') as depend_file:
+		depend_file.write(json.dumps(dependency_dic))
+	depend_file.close()
+
+	task_file = "task_file.json"
+	with open(task_file,'w') as tk_file:
+		tk_file.write(json.dumps(task_file_dic))
+	tk_file.close()
+
+	dependency_lookup = "depend_lookup.json"
+	with open(dependency_lookup,'w') as lk_file:
+		lk_file.write(json.dumps(depend_lookup))
+	lk_file.close()
+
+	input_lp = "input_lookup.json"
+	with open(input_lp,'w') as lp_file:
+		lp_file.write(json.dumps(input_lookup))
+	lp_file.close()
+
+	output_lp = "output_lookup.json"
+	with open(output_lp,'w') as op_file:
+		op_file.write(json.dumps(output_lookup))
+	op_file.close()
+
+	edge_list = "edge_list.json"
+	with open(edge_list,'w') as edge_file:
+		edge_file.write(json.dumps(access_dict))
+	edge_file.close()
+	return dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list
+
+def periodic_network_test():
+	threading.Timer(100, periodic_network_test).start()
+	ntwk_test=network_test()
+	global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
+	for idx in range(len(global_var.socket_list)):
+		send_ntwk_test(global_var.socket_list[idx])
+	print(global_var.ntwk_matrix)
