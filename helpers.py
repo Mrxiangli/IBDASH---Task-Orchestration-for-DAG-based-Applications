@@ -462,7 +462,6 @@ def connection_listening_thread(client_socket,address):
 		if msg_type == 'F':
 			start = time.time()
 			received = client_socket.recv(NAME_SIZE).decode()
-			print(received)
 			filename, filesize, space = received.split(SEPARATOR)
 			# remove absolute path if there is
 			filename = os.path.basename(filename)
@@ -496,7 +495,6 @@ def connection_listening_thread(client_socket,address):
 
 				f.write(bytes_read)
 				end = time.time()
-				print(f"time: {end-start}")
 				if received_size == filesize:
 					bytes_read = client_socket.recv(4)
 					if bytes_read.decode() != "/EOF":
