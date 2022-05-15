@@ -116,6 +116,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 							if task_dict[each_task][1] not in model_info[j]:
 									model_upload_t = math.ceil(task_dict[each_task][1][1]/ntbd)
 								#add the data transfer time
+						
 						print(f" depend dic: {dependency_dic}")
 						if dependency_dic[int(each_task)] != [None]:
 							for each_dep in dependency_dic[int(each_task)]:
@@ -216,8 +217,8 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 
 			dispatcher_dic[instance_count]=allocation
 			#allocation={"0": [1], "1": [1], "2": [1]}
-			print(f"task allocation for instance {instance_count} : {allocation}")
-			print(f"instance count {instance_count} start dispatching")
+			print(f"Task allocation for instance {instance_count} : {allocation}")
+			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_ibdash.append(i/1000)

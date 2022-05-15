@@ -19,7 +19,6 @@ from multiprocessing import Process
 IDENTIFIER = -1
 device_list=[]
 
-
 lock = threading.Lock()
 
 def json_file_loader(file):
@@ -47,16 +46,6 @@ def network_speed_test(device_list):
 	p2p_test=network_test(device_list)
 	send_ntwk_test(socket_list[-1],p2p_test,IDENTIFIER)
 
-#creat EC2 client for dispatching
-# def createSSHClient(server, password):
-#     client = paramiko.SSHClient()
-#     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-#     if password.split(".")[1] == "pem":
-#     	client.connect(server,username='ec2-user', key_filename=password)
-#     else:
-#     	client.connect(server,username='jonny', key_filename=password)
-#     client_scp = SCPClient(client.get_transport())
-#     return client_scp, client
 def network_test(device_list):
 	p2p_test={}
 	for idx,ip_address in enumerate(device_list):
@@ -75,19 +64,13 @@ def send_files(s,filename):
 	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
 	lock.acquire()
 	s.send("F".encode())
-	print("blocking?")
 	s.send(name)
-	print("sending name?")
 	counter = 0
 	with open(filename, "rb") as f:
 		bytes_read = f.read(filesize)
-		print("able to read?")
 		start = time.time()
-		print(s)
 		s.sendall(bytes_read)
-		print("able to send?")
 		end = time.time()
-		print(f"{filename}:finishing done: {end-start}")
 	s.send("/EOF".encode())
 	lock.release()
 
@@ -165,7 +148,6 @@ def socket_connections(host,port):
 	return s
 
 def connection_creation_thread(connection_queue, socket_q):
-	print("gggg")
 	# device's IP address
 	SERVER_HOST = "0.0.0.0"
 	SERVER_PORT = 5001
@@ -188,7 +170,6 @@ def connection_creation_thread(connection_queue, socket_q):
 		print("waiting for connection")
 		connection_queue.put([client_socket,address])
 		socket_q.put([client_socket,address])
-		print(f"size of queue: {connection_queue.qsize()}")
 
 def spawn_listening_thread(connection_queue, command_queue):
 	print("sssss")
@@ -221,7 +202,6 @@ def connection_listening_thread(client_socket,address, command_queue):
 	
 	while True:
 		if CONNNECTION_EASTABLISHED == True:
-			print(f"{address} listening is alive")
 			msg_type = client_socket.recv(1).decode()
 			print(f"msg: {msg_type}")
 			if msg_type == "P":
@@ -232,25 +212,18 @@ def connection_listening_thread(client_socket,address, command_queue):
 			elif msg_type == "R":
 				sender_id = client_socket.recv(NAME_SIZE).decode()
 				file_requested = client_socket.recv(NAME_SIZE).decode().strip()
-				#file_requested = os.path.join(os.getcwd(),file_requested)
-				print(f"address: {os.getcwd()}")
-				print(os.path.exists(file_requested))
-				print(f"file requested :{file_requested}")
 				if os.path.exists(str(file_requested)) == True:
-					print(f"sending: {file_requested}")
 					send_files(client_socket,str(file_requested))
 
 			elif msg_type == 'F':
 				print("###########################################")
 				start = time.time()
 				received = client_socket.recv(NAME_SIZE).decode()
-				print(f"received:{received}")
 				filename, filesize, space = received.split(SEPARATOR)
-				# remove absolute path if there is
+				# remove absolute path if there is any
 				filename = os.path.basename(filename)
-				# convert to integer
+				print(f"Receiving file: {received}")
 				filesize = int(filesize)
-				print(f"filesize {filesize}")
 				receive_files(filesize,BUFFER_SIZE,filename,client_socket)
 				
 			elif msg_type == "C":
@@ -262,11 +235,11 @@ def connection_listening_thread(client_socket,address, command_queue):
 			elif msg_type == "L":
 				label= client_socket.recv(NAME_SIZE).decode()
 				IDENTIFIER = int(label)
-				print(f"IDENTIFIER: {IDENTIFIER}")
+				print(f"IDENTIFIER of this device: {IDENTIFIER}")
 				CONNNECTION_EASTABLISHED = False
-	
+
 			else:
-				print(f'transmission error')
+				print(f'transmission error, unrecognizable message type: {msg_type}')
 
 	client_socket.close()
 
@@ -314,7 +287,15 @@ def processing_thread(command,socket_list):
 									send_resend_request(socket_list[each_device],IDENTIFIER,file_to_be_retrieved)
 								except:
 									print(f"Fail to retrieve missing file {file_to_be_retrieved} from device {each_device}, exiting")
-									sys.exit()	
+									sys.exit()
+
+				timeout_start = time.time()
+				while os.path.exists(file_to_be_retrieved) == False
+					timeout_end=time.time()
+					if timeout_end - timeout_start > 30:
+						print(f"Time out on retrieving file: {file_to_be_retrieved},exiting")
+						sys.exit()
+
 
 	#execute the main task related to this node
 	task = task_lookup(tk_num, task_dic)
@@ -324,52 +305,36 @@ def processing_thread(command,socket_list):
 	out,err = p.communicate()
 
 	if err:
-		print("task {} did not finish execution, exiting!".format(task))
-		print(err)
+		print(f"task {task} did not finish execution, exiting! \n Error: {err}")
 		sys.exit()
 
+	# send the output from this task to the edge devices that will execute the depedent tasks
 	output_from_current_tk = output_lookup[str(tk_num)]
 	for each in output_from_current_tk:
-		print(f"file: {each}")
 		intermediate_file = each[0]+str(instance_count)+each[2]
-		print(intermediate_file)
-		#print(each)
 		for each_edge in allocation_dic[str(each[3])]:
+			# no need to send if on the same device
 			if each_edge != IDENTIFIER:
-				print(f"IDENTIFIER:{IDENTIFIER}")
-				print(f"each_edge: {each_edge}")
-				print("are we sending?")
 				send_files(socket_list[each_edge],intermediate_file)
-				print("finish sending?")
-			#edge_list_scp[each_edge].put(intermediate_file)
-	print("does it reach here?")
+
 	#looking for the dependency and find the next device and task
 	next_stage_dict=next_task(tk_num,depend_lookup,input_lookup)
-	#print(next_stage_dict)
-	#Current task is the last task
+
+	#if current task is the last task
 	if len(next_stage_dict) == 0:
-		#print(input_lookup['end'])
 		output_file=f"predict_{instance_count}.txt"
 		send_files(socket_list[-1],output_file)
-		print("finish the result")
-		#result_file = "predict_"+str(args.ic)+".txt"
-		#edge_list_scp[3].put(result_file,"/home/jonny/Documents/Research/IBDASH_V2/result")
-	#send the output from this stage to next device
+		print(f"Send result of instance {instance_count} back to orchestrator")
 
+
+	# send the next command to next stage of tasks
 	for each_tk in next_stage_dict.keys():
-		ed = allocation_dic[each_tk][0]
-		
 		allocation_file = "allocation_"+str(instance_count)+".json"
 		command = "{} {} {}".format(allocation_file,each_tk,instance_count)
 		command = str((int(instance_count),command))
-		#print(command)
-		#print("the above command execute on ed: {}".format(ed))
-		#stdin,stdout,stderr=edge_list_ssh[ed].exec_command(command)
-		print(f"sending comand ==========: {command}")
-		send_command(socket_list[ed],command)
-		#edge_list_ssh[ed].exec_command(command)
-		#for line in stdout.read().splitlines():
-		#	print(line)
+		for ed in allocation_dic[each_tk]:
+			print(f"sending comand ==========: {command}")
+			send_command(socket_list[ed],command)
 
 
 #Running this on each edge
@@ -378,7 +343,6 @@ if __name__ =='__main__':
 	command_q = PriorityQueue()
 	socket_q = Queue()
 	socket_list=[]
-
 	CONNNECTION_EASTABLISHED = True
 
 	try:
@@ -411,17 +375,9 @@ if __name__ =='__main__':
 	for each_key in edge_list.keys():
 		device_list.append(edge_list[each_key])
 
-	#network_speed_test(device_list)
-	#send_resend_request(socket_list[0],IDENTIFIER,"test.lol")
-	#while True:
-#		pass
-
 	command_thread.start()
 	CONNNECTION_EASTABLISHED = True
 
-	#time.sleep(3)
-
-	#send_files(socket_list[-1],"test.opt")
 
 
 
