@@ -119,7 +119,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 									model_upload_t = math.ceil(task_dict[each_task][1][1]/ntbd)			# ntbd need to be replaced with current network downloading speed
 								#add the data transfer time
 						
-						print(f" depend dic: {dependency_dic}")
+						#print(f" depend dic: {dependency_dic}")
 						# obtain the input file for the current task 
 						inputfile_current_task=[]
 						for each_inputfile in inputfile_dic[str(task)]:
@@ -130,9 +130,9 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 							for each_dep in dependency_dic[int(each_task)]:
 								if each_dep[1] == 1:		# indicate data dependency exists is its 1
 									# currently no replication is considered
-									print(f"task {each_task} depends on task {each_dep}, which is located at {allocation[each_dep[0]]}")
+									#print(f"task {each_task} depends on task {each_dep}, which is located at {allocation[each_dep[0]]}")
 									transfer_speed=global_var.ntwk_matrix[allocation[each_dep[0]][0]][j] # obtain the transfer speed
-									print(f"transfer speed from {allocation[each_dep[0]][0]} to {j}: {transfer_speed}")
+									#print(f"transfer speed from {allocation[each_dep[0]][0]} to {j}: {transfer_speed}")
 									if transfer_speed == -1 or instance_count == 0:
 										pass
 									else:
@@ -239,7 +239,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
-			#allocation={"0": [1], "1": [1], "2": [1]}
+			#allocation={"0": [0], "1": [1], "2": [2], "3":[0]}
 			print(f"Task allocation for instance {instance_count} : {allocation}")
 			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
@@ -898,15 +898,13 @@ if __name__ =='__main__':
 	dagplot(original_dag)
 	vert_dict, vert_stage = app_stage(edge_adj)
 	task_types = len(task_dict)-1
-	print(task_dict)
+
 	dependency_dic=dependency_dic(app_data,task_dict)
 	depend_lookup=dependency_lookup(app_data)
-	print(dependency_dic)
 	inputfile_dic=inputfile_dic(app_data)
 	input_lookup=inputfile_lookup(app_data)
 	output_lookup=output_lookup(app_data)
-	print(inputfile_dic)
-	print(output_lookup)
+
 	task_file_dic={} #use this dictionary to track the file need to be used in each task
 	for task in app_data['Application']['Vertices']:
 		task_file_dic[task['name']]=task['file'][0]

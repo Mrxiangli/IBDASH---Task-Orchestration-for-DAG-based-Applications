@@ -41,7 +41,7 @@ if __name__ =='__main__':
 	y_preds=[]
 
 	for i in range(1,num_models+1):
-		filename = "lightGBM_model_"+str(args.count)+".txt"
+		filename = f"lightGBM_model_{i}_{args.count}.txt"
 
 		gbm = lgb.Booster(model_file=os.path.join(path_parent,filename))
 		y_pred = gbm.predict(X_test, num_iteration=gbm.best_iteration)

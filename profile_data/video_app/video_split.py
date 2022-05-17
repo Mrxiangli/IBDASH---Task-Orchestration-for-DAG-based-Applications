@@ -114,7 +114,7 @@ def split_by_seconds(filename, split_length, vcodec="copy", acodec="copy",
 
 				split_args += ["-ss", str(split_start), "-t", str(split_length),
 											 filebase + "-" + str(n + 1) + "-of-" +
-											 str(split_count) + str(rd.randint(0,100000))+ "." + fileext]
+											 str(split_count) + "." + fileext]
 				#print("About to run: " + " ".join(split_cmd + split_args))
 				subprocess.check_output(split_cmd + split_args)
 

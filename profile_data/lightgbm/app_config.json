@@ -3,9 +3,10 @@
   {
     "Edges":{
       "s": ["0"],
-      "0": ["1"],
-      "1": ["2"],
-      "2": ["end"]
+      "0": ["1","2"],
+      "1": ["3"],
+      "2": ["3"],
+      "3": ["end"]
     },
 
     "Vertices":[
@@ -23,16 +24,16 @@
         "model": ["NULL",0],
         "depend":{"None":0},
         "input":[["Digits_Train.txt",0]],
-        "output":[["Digits_Train_Transform_",1,".txt",1],["vectors_pca_",1,".npy",2]],
+        "output":[["Digits_Train_Transform_",1,".txt",[1,2]],["vectors_pca_",1,".npy",[3]]],
         "param": {}
       },
       {
         "name": "1",
-        "file" : ["train.py",15],
+        "file" : ["train_1.py",15],
         "model": ["conv", 1200],
         "depend":{"0":1},
         "input":[["Digits_Train_Transform_",1,".txt"]],
-        "output":[["lightGBM_model_",1,".txt",2]],
+        "output":[["lightGBM_model_1_",1,".txt",[3]]],
         "param":{
           "kernel": 3,
           "padding": 0,
@@ -41,11 +42,24 @@
       },
       {
         "name": "2",
+        "file" : ["train_2.py",15],
+        "model": ["conv", 1200],
+        "depend":{"0":1},
+        "input":[["Digits_Train_Transform_",1,".txt"]],
+        "output":[["lightGBM_model_2_",1,".txt",[3]]],
+        "param":{
+          "kernel": 3,
+          "padding": 0,
+          "strides": 1
+        }
+      },
+      {
+        "name": "3",
         "file" : ["com_test.py", 15],
         "model": ["conv2",600],
-        "depend":{"1":1},
-        "input":[["lightGBM_model_",1,".txt"],["Digits_Test.txt",0],["vectors_pca_",1,".npy"]],
-        "output":[["predict_",1,".txt",2]],
+        "depend":{"1":1, "2":1},
+        "input":[["lightGBM_model_1_",1,".txt"],["lightGBM_model_2_",1,".txt"],["Digits_Test.txt",0],["vectors_pca_",1,".npy"]],
+        "output":[["predict_",1,".txt",[3]]],
         "param":{
           "kernel": 5,
           "padding": 0,
