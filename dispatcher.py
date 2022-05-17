@@ -9,7 +9,7 @@ import pdb
 
 #The dispatch function should be called when one application instance is orchestrated
 def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inputfile_dic, socket_list, non_meta_files):
-	
+
 	allocation_file = os.path.join(directory,"allocation_"+str(instance_count)+".json")
 	with open(allocation_file,'w') as allocate:
 		allocate.write(json.dumps(allocation))
@@ -52,9 +52,10 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 	for eachtask in dependency_dic.keys():
 		if dependency_dic[eachtask]==[None]:
 			allocation_file = "allocation_"+str(instance_count)+".json"
-			command = "{} {} {} /EOC".format(allocation_file,eachtask,instance_count)
+			num_depend = len(dependency_dic[int(eachtask)])
+			command = "{} {} {} {}".format(allocation_file,eachtask,instance_count,num_depend)		#num_depend is used as one more layer of guarante to ensure the task with multiple input are executed at the right time
 			command = str((int(instance_count),command))		# priority command queue
-
+			print(f"sending {command} to {each_edge}")
 			for each_edge in allocation[str(eachtask)]:
 				send_command(socket_list[each_edge],command)
 

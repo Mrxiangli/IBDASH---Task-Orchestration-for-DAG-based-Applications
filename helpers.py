@@ -245,6 +245,7 @@ def dependency_dic(app_data,task_dict):
 	dependency_dic=dict()
 	# The following code are for dependency purpose
 	for main_task in app_data['Application']['Edges']:
+		#print(f"main_task:{main_task}")
 		if main_task != 'end':
 			if main_task == 's':
 				for depend_task in app_data['Application']['Edges'][main_task]:
@@ -255,7 +256,8 @@ def dependency_dic(app_data,task_dict):
 			if main_task != 's' and main_task != 'end':
 				for depend_task in app_data['Application']['Edges'][main_task]:
 					if depend_task != "end":
-						if depend_task not in dependency_dic.keys():
+						#print(f"depend task: {depend_task}")
+						if int(depend_task) not in dependency_dic.keys():
 							dependency_dic[int(depend_task)]=[(main_task,task_dict[depend_task][2][main_task])]
 							# the second value is used to track the type of dependency
 						else:
@@ -506,7 +508,7 @@ def connection_listening_thread(client_socket,address):
 def network_test():
 	p2p_test={}
 	for idx,ip_address in enumerate(global_var.device_list):
-		result = ping(ip_address,count=5,payload_size=1024,privileged=False)
+		result = ping(ip_address,count=5,payload_size=1024,interval=0.05,privileged=False)
 		p2p_test[idx]=round(((1024/(result.avg_rtt/2))*1000)/1000000,2)
 	return p2p_test
 	# the last device in the deive list is orchestrator
