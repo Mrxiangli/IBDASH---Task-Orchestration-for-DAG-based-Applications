@@ -322,7 +322,7 @@ def processing_thread(command,socket_list):
 	out,err = p.communicate()
 
 	if err:
-		print(f"task {task} did not finish execution, exiting! \n Error: {err}")
+		print(f"task {command} did not finish execution, exiting! \n Error: {err}")
 		sys.exit()
 
 	# send the output from this task to the edge devices that will execute the depedent tasks

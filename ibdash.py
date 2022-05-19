@@ -129,7 +129,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 						if dependency_dic[int(each_task)] != [None]:
 							for each_dep in dependency_dic[int(each_task)]:
 								if each_dep[1] == 1:		# indicate data dependency exists is its 1
-									# currently no replication is considered
+									#currently no replication is considered
 									#print(f"task {each_task} depends on task {each_dep}, which is located at {allocation[each_dep[0]]}")
 									transfer_speed=global_var.ntwk_matrix[allocation[each_dep[0]][0]][j] # obtain the transfer speed
 									#print(f"transfer speed from {allocation[each_dep[0]][0]} to {j}: {transfer_speed}")
@@ -239,7 +239,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
-			allocation={'0': [0], '1': [1], '2': [0], '3': [1], '4': [0], '5': [1], '6': [0], '7': [1]}
+			#allocation={'0': [0], '1': [1], '2': [0], '3': [1], '4': [0], '5': [1], '6': [0], '7': [1]}
 			print(f"Task allocation for instance {instance_count} : {allocation}")
 			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
@@ -916,7 +916,7 @@ if __name__ =='__main__':
 	ntbd = 600							#network bandwidth
 	app_inst_time = 30					#the period of time that application instances might arrive
 	sim_time = 20000					#simulation period
-	num_arrivals = 1					#number of application instances arrived during app_ins_time	
+	num_arrivals = 20					#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
