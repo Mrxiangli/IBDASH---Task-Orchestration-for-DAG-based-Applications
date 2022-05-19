@@ -1,0 +1,24 @@
+abaya: 49.06% 
+cloak: 5.01% 
+suit, suit of clothes: 4.30% 
+
+sleeping bag: 62.58% 
+quilt, comforter, comfort, puff: 8.05% 
+hoopskirt, crinoline: 3.85% 
+
+laptop, laptop computer: 25.71% 
+desktop computer: 21.00% 
+monitor: 15.32% 
+
+medicine chest, medicine cabinet: 34.63% 
+toilet seat: 33.25% 
+toilet tissue, toilet paper, bathroom tissue: 13.23% 
+
+hand blower, blow dryer, blow drier, hair dryer, hair drier: 23.83% 
+paper towel: 15.44% 
+toilet tissue, toilet paper, bathroom tissue: 12.28% 
+
+refrigerator, icebox: 20.11% 
+wardrobe, closet, press: 19.93% 
+medicine chest, medicine cabinet: 13.30% 
+

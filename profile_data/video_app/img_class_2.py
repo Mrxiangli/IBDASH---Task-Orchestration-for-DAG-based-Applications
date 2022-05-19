@@ -6,14 +6,18 @@ from mxnet import gluon, nd
 from mxnet.gluon.model_zoo import vision
 import numpy as np
 import time as timer
+import argparse
+import configparser
 
-def predict(model, image, categories, k):
+def predict(model, image, categories, k, file_handle):
 	predictions = model(transform(image)).softmax()
 	top_pred = predictions.topk(k=k)[0].asnumpy()
 	for index in top_pred:
 		probability = predictions[0][int(index)]
 		category = categories[int(index)]
-		#print("{}: {:.2f}%".format(category, probability.asscalar()*100))
+		#comment above uncomment below for real execution
+		file_handle.write(f"{category}: {probability.asscalar()*100:.2f}% \n")
+
    # print('')
 
 def transform(image):
@@ -28,6 +32,10 @@ def transform(image):
 	return batchified
 
 if __name__ =='__main__':
+	
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--count', type=int, help='instance_count')
+	args = parser.parse_args()
 
 	start=timer.time()
 	ctx = mx.cpu()
@@ -40,14 +48,15 @@ if __name__ =='__main__':
 	categories = np.array(json.load(open('image_net_labels.json', 'r')))
 
 
-	path_parent = os.path.dirname(os.getcwd())
-	file_path="video_app/img_set2/"
-	dir_path=os.path.join(path_parent,file_path) 
-	for each_img in os.listdir(dir_path):
-		if ".jpg" in each_img:
-			#print(each_img)
-			image = mx.image.imread(os.path.join(dir_path,each_img))
-			plt.imshow(image.asnumpy())
-			predict(resnet18, image, categories, 3)
+	path_parent = os.getcwd()
+	for i in range(1,3):
+		file_name=f"test_2_of_3_frame_{i}_{args.count}.jpg"
+		result_file=f"test_2_of_3_frame_{i}_result_{args.count}.txt"
+		f_handle=open(result_file,"w")
+		#f_handle=None
+		file_path=os.path.join(path_parent,file_name) 
+		image = mx.image.imread(file_path)
+		#plt.imshow(image.asnumpy())
+		predict(resnet18, image, categories, 3, f_handle)
 	end=timer.time()
-	print("img_class_2: "+str((end-start)/100))
+	print("img_class_2: "+str((end-start)))

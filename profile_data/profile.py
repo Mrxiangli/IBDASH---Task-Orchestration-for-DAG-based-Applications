@@ -12,11 +12,11 @@ row = 0
 col = 0
 
 cmd = ""
-back_pro=[0,1,2,3,4,5,6,7,8,9,10]
-x_ax = [0,1,2,3,4,5,6,7,8,9,10]
+back_pro=[0,1,2,3,4,5,6,7,8]
+x_ax = [0,1,2,3,4,5,6,7,8]
 prof_num=1
-prof_tk = ["pca.py --count 0", "train.py --count 0", "com_test.py --count 0"]
-base_tk_list = ["pca.py --count 0 & ", "train.py --count 0 & ","com_test.py --count 0 & "]
+prof_tk = ["video_split.py --count 0", "extract_frame_1.py --count 0",  "extract_frame_2.py --count 0",  "extract_frame_3.py --count 0","img_class_1.py --count 0", "img_class_2.py --count 0", "img_class_3.py --count 0", "gathering_result.py --count 0"]
+base_tk_list = ["video_split.py --count 0 &", "extract_frame_1.py --count 0 &", "extract_frame_2.py --count 0 &","extract_frame_3.py --count 0 &", "img_class_1.py --count 0 &","img_class_2.py --count 0 &","img_class_3.py --count 0 &" ,"gathering_result.py --count 0 &"]
 for base_tk in base_tk_list:
 	mc_dic={}
 	for profile_file in prof_tk:
@@ -29,7 +29,6 @@ for base_tk in base_tk_list:
 			print(cmd)
 			prof_proc = subprocess.Popen([cmd],shell=True,stdout=subprocess.PIPE,encoding='utf8')
 			output = prof_proc.stdout.read()
-			print(output)
 			time_result = output.split("\n")
 			cmd =""
 			for each in time_result:
