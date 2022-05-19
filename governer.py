@@ -104,7 +104,8 @@ def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 		if received_size == filesize:
 			bytes_read = client_socket.recv(4)
 			if bytes_read.decode() != "/EOF":
-				print(f" error transmitting {filename}")
+				print(f" error transmitting {filename}, exiting")
+				sys.exit()
 
 def send_command(s,msg):
 	SEPARATOR = "<SEPARATOR>"
@@ -248,7 +249,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 				CONNNECTION_EASTABLISHED = False
 
 			else:
-				print(f'transmission error, unrecognizable message type: {msg_type}')
+				print(f'transmission error, unrecognizable message type: {msg_type}, exiting')
+				sys.exit()
 
 	client_socket.close()
 
@@ -336,13 +338,15 @@ def processing_thread(command,socket_list):
 
 	#looking for the dependency and find the next device and task
 	next_stage_dict=next_task(tk_num,depend_lookup,input_lookup)
+	print(f"current tk: {tk_num}, next_stage_dict:{next_stage_dict}")
 
 	#if current task is the last task
 	if len(next_stage_dict) == 0:
-		output_file=f"predict_{instance_count}.txt"
-		send_files(socket_list[-1],output_file)
-		print(f"Send result of instance {instance_count} back to orchestrator")
-
+		output_file_list=output_lookup[str(tk_num)]
+		for each_output in output_file_list:
+			output_file=f"{each_output[0]}{instance_count}{each_output[2]}"
+			send_files(socket_list[-1],output_file)
+			print(f"Send result:{output_file} of instance {instance_count} back to orchestrator")
 
 	# send the next command to next stage of tasks
 	for each_tk in next_stage_dict.keys():

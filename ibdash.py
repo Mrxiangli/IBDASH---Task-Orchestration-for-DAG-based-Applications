@@ -239,7 +239,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				i_norm = i_norm + longest_task_time_norm
 
 			dispatcher_dic[instance_count]=allocation
-			#allocation={"0": [0], "1": [1], "2": [2], "3":[0]}
+			allocation={'0': [0], '1': [1], '2': [0], '3': [1], '4': [0], '5': [1], '6': [0], '7': [1]}
 			print(f"Task allocation for instance {instance_count} : {allocation}")
 			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
@@ -916,11 +916,11 @@ if __name__ =='__main__':
 	ntbd = 600							#network bandwidth
 	app_inst_time = 30					#the period of time that application instances might arrive
 	sim_time = 20000					#simulation period
-	num_arrivals = 20					#number of application instances arrived during app_ins_time	
+	num_arrivals = 1					#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 3					#number of edge devices in DAG
+	num_edge_max = 5					#number of edge devices in DAG
 
 
 	global_var.device_list=[]
@@ -929,13 +929,13 @@ if __name__ =='__main__':
 	access_dict[1]="128.46.74.172" #nx2
 	access_dict[2]="128.46.74.173" #nx3
 	#access_dict[3]="54.172.191.10" #nx3
-	#access_dict[3]="128.46.74.95" #agx
+	access_dict[3]="128.46.74.95" #agx
 	#access_dict[4]="128.46.32.175" #server
-	#access_dict[3]="128.46.32.175" #ashraf server
+	access_dict[4]="128.46.32.175" #ashraf server
 	#access_dict[5]="44.204.119.25" #t22
 
 	global_var.IDENTIFIER = num_edge_max
-	access_dict[3]="128.46.73.218"
+	access_dict[5]="128.46.73.218"
 
 	for each in access_dict.keys():
 		global_var.device_list.append(access_dict[each])

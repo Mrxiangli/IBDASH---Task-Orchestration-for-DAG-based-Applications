@@ -1,0 +1,3 @@
+laptop, laptop computer: 26.90% 
+desktop computer: 18.16% 
+monitor: 18.16% 

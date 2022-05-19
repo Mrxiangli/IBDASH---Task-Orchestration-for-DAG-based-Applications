@@ -11,68 +11,6 @@ import time as timer
 import random as rd
 
 
-def split_by_manifest(filename, manifest, vcodec="copy", acodec="copy",
-											extra="", **kwargs):
-		""" Split video into segments based on the given manifest file.
-		Arguments:
-				filename (str)      - Location of the video.
-				manifest (str)      - Location of the manifest file.
-				vcodec (str)        - Controls the video codec for the ffmpeg video
-														output.
-				acodec (str)        - Controls the audio codec for the ffmpeg video
-														output.
-				extra (str)         - Extra options for ffmpeg.
-		"""
-		if not os.path.exists(manifest):
-				print("File does not exist: %s" % manifest)
-				raise SystemExit
-
-		with open(manifest) as manifest_file:
-				manifest_type = manifest.split(".")[-1]
-				if manifest_type == "json":
-						config = json.load(manifest_file)
-				elif manifest_type == "csv":
-						config = csv.DictReader(manifest_file)
-				else:
-						print("Format not supported. File must be a csv or json file")
-						raise SystemExit
-
-				split_cmd = ["ffmpeg", "-i", filename, "-vcodec", vcodec,
-										 "-acodec", acodec, "-y"] + shlex.split(extra)
-				try:
-						fileext = filename.split(".")[-1]
-				except IndexError as e:
-						raise IndexError("No . in filename. Error: " + str(e))
-				for video_config in config:
-						split_args = []
-						try:
-								split_start = video_config["start_time"]
-								split_length = video_config.get("end_time", None)
-								if not split_length:
-										split_length = video_config["length"]
-								filebase = video_config["rename_to"]
-								if fileext in filebase:
-										filebase = ".".join(filebase.split(".")[:-1])
-
-								split_args += ["-ss", str(split_start), "-t",
-															 str(split_length), filebase + "." + fileext]
-								print("########################################################")
-								print("About to run: " + " ".join(split_cmd + split_args))
-								print("########################################################")
-								subprocess.check_output(split_cmd + split_args)
-						except KeyError as e:
-								print("############# Incorrect format ##############")
-								if manifest_type == "json":
-										print("The format of each json array should be:")
-										print("{start_time: <int>, length: <int>, rename_to: <string>}")
-								elif manifest_type == "csv":
-										print("start_time,length,rename_to should be the first line ")
-										print("in the csv file.")
-								print("#############################################")
-								print(e)
-								raise SystemExit
-
-
 def get_video_length(filename):
 		output = subprocess.check_output(("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
 																			"default=noprint_wrappers=1:nokey=1", filename)).strip()
@@ -86,12 +24,11 @@ def ceildiv(a, b):
 		return int(math.ceil(a / float(b)))
 
 
-def split_by_seconds(filename, split_length, vcodec="copy", acodec="copy",
-										 extra="", video_length=None, **kwargs):
+def split_by_seconds(filename, split_length, instance_count, vcodec="copy", acodec="copy", extra="", video_length=None, **kwargs):
 		if split_length and split_length <= 0:
 				print("Split length can't be 0")
 				raise SystemExit
-
+		#idx=rd.randint(1,10000)
 		if not video_length:
 				video_length = get_video_length(filename)
 		split_count = ceildiv(video_length, split_length)
@@ -99,7 +36,7 @@ def split_by_seconds(filename, split_length, vcodec="copy", acodec="copy",
 				print("Video length is less then the target split length.")
 				raise SystemExit
 
-		split_cmd = ["ffmpeg", "-i", filename, "-vcodec", vcodec, "-acodec", acodec, "-loglevel","0"] + shlex.split(extra)
+		split_cmd = ["ffmpeg","-y", "-i", filename, "-vcodec", vcodec, "-acodec", acodec, "-loglevel","0"] + shlex.split(extra)
 		try:
 				filebase = ".".join(filename.split(".")[:-1])
 				fileext = filename.split(".")[-1]
@@ -113,23 +50,24 @@ def split_by_seconds(filename, split_length, vcodec="copy", acodec="copy",
 						split_start = split_length * n
 
 				split_args += ["-ss", str(split_start), "-t", str(split_length),
-											 filebase + "-" + str(n + 1) + "-of-" +
-											 str(split_count) + "." + fileext]
+											 filebase + "_" + str(n + 1) + "_of_" +
+											 str(split_count) + "_"+str(instance_count)+"." + fileext]
 				#print("About to run: " + " ".join(split_cmd + split_args))
 				subprocess.check_output(split_cmd + split_args)
-
-				for each in os.listdir(os.getcwd()):
-					if "-of-" in each and os.path.isdir(os.path.join(os.getcwd(),each)):
-						os.remove(each)
+		#remove this after profiling
+		#rm_path=os.getcwd()
+		#os.remove(os.path.join(rm_path,f"test_1_of_3_0{idx}.mp4"))
+		#os.remove(os.path.join(rm_path,f"test_2_of_3_0{idx}.mp4"))
+		#os.remove(os.path.join(rm_path,f"test_3_of_3_0{idx}.mp4"))
 
 
 def main():
 		parser = OptionParser()
-
-		parser.add_option("-f", "--file",
-											dest="filename",
-											help="File to split, for example sample.avi",
-											type="string",
+		
+		parser.add_option("--count", 
+											dest="instance_count",
+											help="instance count",
+											type="int",
 											action="store"
 											)
 		parser.add_option("-s", "--split-size",
@@ -138,25 +76,11 @@ def main():
 											type="int",
 											action="store"
 											)
-		parser.add_option("-c", "--split-chunks",
-											dest="split_chunks",
-											help="Number of chunks to split to",
-											type="int",
-											action="store"
-											)
 		parser.add_option("-S", "--split-filesize",
 											dest="split_filesize",
 											help="Split or chunk size in bytes (approximate)",
 											type="int",
 											action="store"
-											)
-		parser.add_option("--filesize-factor",
-											dest="filesize_factor",
-											help="with --split-filesize, use this factor in time to"
-													 " size heuristics [default: %default]",
-											type="float",
-											action="store",
-											default=0.95
 											)
 		parser.add_option("--chunk-strategy",
 											dest="chunk_strategy",
@@ -167,12 +91,7 @@ def main():
 											choices=['eager', 'even'],
 											default='eager'
 											)
-		parser.add_option("-m", "--manifest",
-											dest="manifest",
-											help="Split video based on a json manifest file. ",
-											type="string",
-											action="store"
-											)
+
 		parser.add_option("-v", "--vcodec",
 											dest="vcodec",
 											help="Video codec to use. ",
@@ -195,37 +114,33 @@ def main():
 											action="store"
 											)
 		(options, args) = parser.parse_args()
+		
+		filename="test.mp4"
+		split_chunks=3
 
 		def bailout():
 				parser.print_help()
 				raise SystemExit
 
-		if not options.filename:
+		if not filename:
 				bailout()
 
-		if options.manifest:
-				split_by_manifest(**options.__dict__)
 		else:
 				video_length = None
 				if not options.split_length:
-						video_length = get_video_length(options.filename)
-						file_size = os.stat(options.filename).st_size
+						video_length = get_video_length(filename)
+						file_size = os.stat(filename).st_size
 						split_filesize = None
-						if options.split_filesize:
-								split_filesize = int(options.split_filesize * options.filesize_factor)
-						if split_filesize and options.chunk_strategy == 'even':
-								options.split_chunks = ceildiv(file_size, split_filesize)
-						if options.split_chunks:
-								options.split_length = ceildiv(video_length, options.split_chunks)
-						if not options.split_length and split_filesize:
-								options.split_length = int(split_filesize / float(file_size) * video_length)
+						if split_chunks:
+								options.split_length = ceildiv(video_length, split_chunks)
+
 				if not options.split_length:
 						bailout()
-				split_by_seconds(video_length=video_length, **options.__dict__)
+				split_by_seconds(filename, video_length=video_length, **options.__dict__)
 
 
 if __name__ == '__main__':
 		start=timer.time()
 		main()
 		end=timer.time()
-		print("video_split: "+str((end-start)/100))
+		print("video_split: "+str((end-start)))

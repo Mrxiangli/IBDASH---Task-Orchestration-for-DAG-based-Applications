@@ -3,11 +3,14 @@
   {
     "Edges":{
       "s": ["0"],
-      "0": ["1","2"],
-      "1": ["3"],
-      "2": ["4"],
-      "3": ["end"],
-      "4": ["end"]
+      "0": ["1","2","3"],
+      "1": ["4"],
+      "2": ["5"],
+      "3": ["6"],
+      "4": ["7"],
+      "5": ["7"],
+      "6": ["7"],
+      "7": ["end"]
     },
 
     "Vertices":[
@@ -20,54 +23,83 @@
       },
       {
         "name": "0",
-        "file" : ["preProcessImage.py",10],
+        "file" : ["video_split.py",10],
         "model": ["NULL",0],
-        "input":{"None":0},
+        "depend":{"None":0},
+        "input":[["test.mp4",0]],
+        "output":[["test_1_of_3_",1,".mp4",[1]],["test_2_of_3_",1,".mp4",[2]],["test_3_of_3_",1,".mp4",[3]]],
         "param": {}
       },
       {
         "name": "1",
-        "file" : ["convolution.py",15],
-        "model": ["conv", 1200],
-        "input":{"0":0},
-        "param":{
-          "kernel": 3,
-          "padding": 0,
-          "strides": 1
-        }
+        "file" : ["extract_frame_1.py",10],
+        "model": ["NULL",0],
+        "depend":{"0":1},
+        "input":[["test_1_of_3_",1,".mp4"]],
+        "output":[["test_1_of_3_frame_1_",1,".jpg",[4]],["test_1_of_3_frame_2_",1,".jpg",[4]]],
+        "param": {}
       },
       {
         "name": "2",
-        "file" : ["convolution.py", 15],
-        "model": ["conv2",600],
-        "input":{"0":0},
-        "param":{
-          "kernel": 5,
-          "padding": 0,
-          "strides": 1
-        }
+        "file" : ["extract_frame_2.py",10],
+        "model": ["NULL",0],
+        "depend":{"0":1},
+        "input":[["test_2_of_3_",1,".mp4"]],
+        "output":[["test_2_of_3_frame_1_",1,".jpg",[5]],["test_2_of_3_frame_2_",1,".jpg",[5]]],
+        "param": {}
       },
       {
         "name": "3",
-        "file" : ["convolution.py",15],
-        "model": ["conv1",2200],
-        "input":{"1":0},
-        "param":{
-          "kernel": 3,
-          "padding": 0,
-          "strides": 1
-        }
+        "file" : ["extract_frame_3.py",10],
+        "model": ["NULL",0],
+        "depend":{"0":1},
+        "input":[["test_3_of_3_",1,".mp4"]],
+        "output":[["test_3_of_3_frame_1_",1,".jpg",[6]],["test_3_of_3_frame_2_",1,".jpg",[6]]],
+        "param": {}
       },
-        {
+      {
         "name": "4",
-        "file" : ["convolution.py",15],
-        "model": ["conv",1200],
-        "input":{"2":0},
-        "param":{
-          "kernel": 3,
-          "padding": 0,
-          "strides": 1
-        }
+        "file" : ["img_class_1.py",10],
+        "model": ["NULL",0],
+        "depend":{"1":1},
+        "input":[["test_1_of_3_frame_1_",1,".jpg"],["test_1_of_3_frame_2_",1,".jpg"]],
+        "output":[["test_1_of_3_frame_1_result_",1,".txt",[7]],["test_1_of_3_frame_2_result_",1,".txt",[7]]],
+        "param": {}
+      },
+      {
+        "name": "5",
+        "file" : ["img_class_2.py",10],
+        "model": ["NULL",0],
+        "depend":{"2":1},
+        "input":[["test_2_of_3_frame_1_",1,".jpg"],["test_2_of_3_frame_2_",1,".jpg"]],
+        "output":[["test_2_of_3_frame_1_result_",1,".txt",[7]],["test_2_of_3_frame_2_result_",1,".txt",[7]]],
+        "param": {}
+      },
+      {
+        "name": "6",
+        "file" : ["img_class_3.py",10],
+        "model": ["NULL",0],
+        "depend":{"3":1},
+        "input":[["test_3_of_3_frame_1_",1,".jpg"],["test_3_of_3_frame_2_",1,".jpg"]],
+        "output":[["test_3_of_3_frame_1_result_",1,".txt",[7]],["test_3_of_3_frame_2_result_",1,".txt",[7]]],
+        "param": {}
+      },
+      {
+        "name": "7",
+        "file" : ["gathering_result.py",10],
+        "model": ["NULL",0],
+        "depend":{"4":1,"5":1,"6":1},
+        "input":[["test_1_of_3_frame_1_result_",1,".txt"],["test_1_of_3_frame_2_result_",1,".txt"],["test_2_of_3_frame_1_result_",1,".txt"],["test_2_of_3_frame_2_result_",1,".txt"],["test_3_of_3_frame_1_result_",1,".txt"],["test_3_of_3_frame_2_result_",1,".txt"]],
+        "output":[["analytic_result_",1,".txt",[7]]],
+        "param": {}
+      },
+      {
+        "name": "end",
+        "file" : ["None",10],
+        "model": ["None",0],
+        "depend":{"4":0},
+        "input":[["analytic_result_",1]],
+        "param": {}
       }
     ]
   }
