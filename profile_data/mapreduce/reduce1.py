@@ -1,22 +1,43 @@
 import pandas as pd
 import os 
 import time as timer
+import json 
+import random as rd
+import argparse
 
-start=timer.time()
+def reducing(file1,file2,file3,file4,count):
 
-path_parent = os.getcwd()
-folder = "red1_input"
-file_path = os.path.join(path_parent,folder)
-#print(file_path)
+	result1={}
+	f1 = open(file1)
+	f2 = open(file2)
+	f3 = open(file3)
+	f4 = open(file4)
+	dic1 = json.load(f1)
+	dic2 = json.load(f2)
+	dic3 = json.load(f3)
+	dic4 = json.load(f4)
+	dic_list=[dic1,dic2,dic3,dic4]
+	result1['Mainland China']={"Confirmed":0, "Deaths":0, "Recovered":0}
+	for each in dic_list:
+		result1['Mainland China']['Confirmed']+=each['Mainland China']['Confirmed']
+		result1['Mainland China']['Deaths']+=each['Mainland China']['Deaths']
+		result1['Mainland China']['Recovered']+=each['Mainland China']['Recovered']
 
-df=[]
-for each in os.listdir(file_path):
-	part_df = pd.read_csv(os.path.join(file_path,each),index_col=None,header=0,low_memory=False)
-	df.append(part_df)
-frames = pd.concat(df,axis=0,ignore_index=True)
-sort_frame = frames.sort_values(by=['pozitie_judet'])
-#sort_frame.to_csv('red1_result.csv',index=False)
+	#with open(f"mainland_result_{count}.json","w") as outfile:
+	with open(f"mainland_{count}_{rd.randint(1,10000)}.json","w") as outfile:
+		json.dump(result1, outfile)
 
-end=timer.time()
+if __name__ =='__main__':
 
-print("reduce1: "+str((end-start)/100))
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--count', type=int, help='instance_count')
+	args = parser.parse_args()
+
+	file1=f'split_output_1_{args.count}.json'
+	file2=f'split_output_2_{args.count}.json'
+	file3=f'split_output_3_{args.count}.json'
+	file4=f'split_output_4_{args.count}.json'
+	start=timer.time()
+	reducing(file1,file2,file3,file4, args.count)
+	end=timer.time()
+	print("reduce1: "+str((end-start)))
