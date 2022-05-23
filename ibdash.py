@@ -27,17 +27,20 @@ from pathlib import Path
 from threading import Thread
 from queue import Queue
 from icmplib import multiping
+from multiprocessing import Process
 import global_var 
+
 pp = pprint.PrettyPrinter(indent=4)
 
-
-def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup):
+def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup,in_out_history,input_lookup):
 	######### IBOT-PI ######### 
-	
+	print(in_out_history)
 	pf_ibdash_av=[]
 	service_time_ibdash=[]
 	service_time_ibdash_norm=[]
 	clock_time = np.arange(0,sim_time,1)
+	# allocation history
+	dispatcher_dic = {}
 
 	#Dictionary that used for updated allocate tasks
 	backtrack_dic={}
@@ -45,7 +48,6 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 		backtrack_dic[each_device]={}
 		for each_task in range(task_types):
 			backtrack_dic[each_device][each_task]=[]
-
 
 	# a dictionary that used to track the available models on each edge device	
 	model_info=dict()
@@ -63,7 +65,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 	k=0      	
 	i=0
 	instance_count = 0
-	dispatcher_dic = {}
+
 	non_meta_files = {}			#tracking the non-meta-file on each device
 	ntbd = 60
 
@@ -75,14 +77,16 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 		time = round(time,2)
 		if time not in task_time:
 			k+=1					# use k to track the unit time 
+			timer.sleep(1)
 		else:
+			timer.sleep(1)
 			i=0
 			i_norm = 0
 			instance_count += 1
 			allocation={}
 			ibot_success = 1					#probability of success
 			tmp_pf_dic = {}						# temporary dictionary used to track probability of failure
-
+			
 			for stage in vert_stage:			# go through each stage in the dag
 				longest_task_time=0
 				longest_task_time_norm=0
@@ -100,7 +104,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 						w=ED_m[j][task*task_types:task*task_types+task_types]
 						x=[]
 						#print(f"k+i: {k+i}")	
-						for idx in range(task_types):		# go through all task types   overall time complexity V * ed * num*task_type
+						for idx in range(task_types):		# go through all task types: overall time complexity V * ed * num*task_type
 							x.append(ED_tasks[idx][j][k+i])
 
 						c=ED_c[j][task*task_types:task*task_types+task_types]
@@ -120,39 +124,46 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 								#add the data transfer time
 						
 						#print(f" depend dic: {dependency_dic}")
+						
 						# obtain the input file for the current task 
 						inputfile_current_task=[]
-						for each_inputfile in inputfile_dic[str(task)]:
-							inputfile_current_task.append(each_inputfile[0])
+						for each_inputfile in input_lookup[str(task)]:
+							if each_inputfile[1] == 0:
+								inputfile_current_task.append(each_inputfile[0]+each_inputfile[2])
+							else:
+								inputfile_current_task.append(each_inputfile[0])
 
-						# potentially this part has bugs
+						# if the current task has no dependency, then no need to calculate data transmission time
 						if dependency_dic[int(each_task)] != [None]:
+							# if the current task has multiple dependency, then the one cuz the longest latency is the bottleneck
 							for each_dep in dependency_dic[int(each_task)]:
+								tmp_trans_time = 0
 								if each_dep[1] == 1:		# indicate data dependency exists is its 1
-									#currently no replication is considered
-									#print(f"task {each_task} depends on task {each_dep}, which is located at {allocation[each_dep[0]]}")
-									transfer_speed=global_var.ntwk_matrix[allocation[each_dep[0]][0]][j] # obtain the transfer speed
-									#print(f"transfer speed from {allocation[each_dep[0]][0]} to {j}: {transfer_speed}")
-									if transfer_speed == -1 or instance_count == 0:
-										pass
+									#check if the previous task is allocated on this potential device under testing (device j)
+									if j in allocation[each_dep[0]]: 
+										tmp_trans_time = 0
 									else:
-										# obtain the result size
-										tmp_size = 0
-										for out_file in output_lookup[each_dep[0]]:
-											if out_file[0] in inputfile_current_task:
-												filename = out_file[0]+str(instance_count-1)+out_file[2]
-												filesize = 1900000/1000000
-												print(f" filename: {filename}, size :{filesize}")
-												if filesize > tmp_size:
-													tmp_size = filesize
-										if transfer_speed !=0:
-											data_trans_t = math.ceil(tmp_size/transfer_speed)
-										# if	data_trans_tmp > data_trans_t:
-										# 	data_trans_t = data_trans_tmp
+										# getting the transfer speed from the device the execute the previous task to the potential device j
+										transfer_speed=global_var.ntwk_matrix[allocation[each_dep[0]][0]][j] 
+										# tranfer speed = -1 indicates the previous tasks are allocated on the same device
+										if transfer_speed == -1 or instance_count == 0:
+											pass
+										else:
+											for each_input_file in inputfile_current_task:
+												if global_var.in_out_history[int(each_task)]['input'][each_input_file]!= []:
+													# using the previous file size: this can be changed accordingly later
+													filesize = global_var.in_out_history[int(each_task)]['input'][each_input_file][-1]
+													# print(f" filename: {filename}, size :{filesize}")
+													tmp_trans_time = math.ceil(filesize/transfer_speed)
+													if tmp_trans_time > data_trans_t:
+														data_trans_t = tmp_trans_time
+												else:
+													# at the beginning of orchestration, need to warm up
+													pass
 						#sys.exit()
 						predict_time = predict_time + model_upload_t + data_trans_t
 						#print(f"total time: {predict_time}")
-						if predict_time < t_pred:		
+						if predict_time <= t_pred:		
 							t_pred = predict_time
 							ED_pred = j
 						fail_prev_queue.append([j,predict_time])
@@ -164,9 +175,21 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 					for serv_time in fail_prev_queue:
 						norm_ele = [serv_time[0],serv_time[1]/fail_prev_queue[-1][1]] # this line has been changed!!! [num_rep-1] -> -1
 						fail_prev_norm_queue.append(norm_ele)
+					
+					# This is new algorithm to prevent the repeated allocation the same performance device
+					# pop out the fastest execution
+					tmp_ED = []
+					for each_element in fail_prev_queue:
+						if each_element[1] == t_pred:
+							tmp_ED.append(each_element[0])
+					ED_pred=random.choice(tmp_ED)
+					#ED_pred, t_pred=fail_prev_queue.pop(0)
+					for each_element in fail_prev_norm_queue:
+						if each_element[0] == ED_pred:
+							t_pred_norm = each_element[1]
+					#t_pred_norm = fail_prev_norm_queue.pop(0)[1]
 
-					ED_pred, t_pred=fail_prev_queue.pop(0)
-					t_pred_norm = fail_prev_norm_queue.pop(0)[1]
+
 					allocation[each_task]=[ED_pred]
 
 					# model uploading process		
@@ -211,6 +234,10 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 					replication = 0
 					while ProbF > pF_thrs and replication < num_rep and fail_prev_queue:		# while the pf > pf_thre and replication < rep_num
 						next_opt = fail_prev_queue.pop(0)
+						# if the next popped is the chosen one already, pop the next
+						while next_opt[0] == ED_pred:
+							t_next_pred_norm = fail_prev_norm_queue.pop(0)[1]
+							next_opt = fail_prev_queue.pop(0)
 						t_next_pred_norm = fail_prev_norm_queue.pop(0)[1]
 						t_next_pred = next_opt[1]
 						t_next_ed = next_opt[0]
@@ -237,13 +264,20 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				ibot_success = ibot_success*(1-ibot_pf_tk)	#probability that the entire application is successsys.exit()
 				i=i+longest_task_time	# tracking the end to end latency
 				i_norm = i_norm + longest_task_time_norm
-
+			if instance_count > 0 and instance_count % 10 == 0:
+				p = Process(target=update_input_output_regression_history, args=(socket_list,instance_count,dependency_dic,dispatcher_dic,input_lookup,output_lookup,))
+				p.start()
+				#pass
 			dispatcher_dic[instance_count]=allocation
+
 			#allocation={'0': [0], '1': [1], '2': [0], '3': [1], '4': [0], '5': [1], '6': [0], '7': [1]}
 			print(f"Task allocation for instance {instance_count} : {allocation}")
 			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+
+			#print(global_var.in_out_history)
+
 			service_time_ibdash.append(i/1000)
 			service_time_ibdash_norm.append(i_norm)
 			k=k+1
@@ -294,7 +328,9 @@ def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 		time = round(time,2)
 		if time not in task_time:
 			k+=1					# use k to track the unit time 
+			timer.sleep(1)
 		else:
+			timer.sleep(1)
 			i=0
 			start_time = timer.time()
 			petrel_pf = 1
@@ -365,6 +401,8 @@ def run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			end_time = timer.time()
 			schedule_time_petrel += end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			print(f"Task allocation for instance {instance_count} : {allocation}")
+			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic,socket_list,non_meta_files)
 			service_time_petrel.append(i/1000)
@@ -413,7 +451,9 @@ def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depen
 		time = round(time,2)
 		if time not in task_time:
 			k+=1					# use k to track the unit time 
+			timer.sleep(1)
 		else:
+			timer.sleep(1)
 			i=0
 			start_time = timer.time()
 			lavea_pf = 1
@@ -491,6 +531,8 @@ def run_lavea(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depen
 			end_time = timer.time()
 			schedule_time_lavea +=end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			print(f"Task allocation for instance {instance_count} : {allocation}")
+			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_lavea.append(i/1000)
@@ -533,7 +575,9 @@ def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict
 		time = round(time,2)
 		if time not in task_time:
 			k+=1					# use k to track the unit time 
+			timer.sleep(1)
 		else:
+			timer.sleep(1)
 			i=0
 			start_time = timer.time()
 			rr_pf = 1
@@ -602,6 +646,8 @@ def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict
 			end_time = timer.time()
 			schedule_time_rr += end_time- start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			print(f"Task allocation for instance {instance_count} : {allocation}")
+			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_rr.append(i/1000)
@@ -642,7 +688,9 @@ def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 		time = round(time,2)
 		if time not in task_time:
 			k+=1					# use k to track the unit time 
+			timer.sleep(1)
 		else:
+			timer.sleep(1)
 			i=0
 			start_time = timer.time()
 			rd_pf = 1
@@ -706,6 +754,8 @@ def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			end_time = timer.time()
 			schedule_time_rd = end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			print(f"Task allocation for instance {instance_count} : {allocation}")
+			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
 			service_time_rd.append(i/1000)
@@ -909,56 +959,56 @@ if __name__ =='__main__':
 	for task in app_data['Application']['Vertices']:
 		task_file_dic[task['name']]=task['file'][0]
 
-	print(task_file_dic)
+	global_var.in_out_history=creat_input_output_regression_history(app_path,dependency_dic,input_lookup,output_lookup)
+
+
 	EDmc_file=os.path.join(app_path,args.mc) # this file has the (m,c) value pairs and should be updated dynamically later on
+	
 	# The following parameters can be used to tune the simulation
 	random.seed(0)
 	ntbd = 600							#network bandwidth
-	app_inst_time = 30					#the period of time that application instances might arrive
+	app_inst_time = 200				#the period of time that application instances might arrive
 	sim_time = 20000					#simulation period
-	num_arrivals = 20					#number of application instances arrived during app_ins_time	
+	num_arrivals = 100					#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
 	num_edge_max = 5					#number of edge devices in DAG
 
-
-	global_var.device_list=[]
 	access_dict={}
 	access_dict[0]="128.46.74.171" #nx1
 	access_dict[1]="128.46.74.172" #nx2
 	access_dict[2]="128.46.74.173" #nx3
-	#access_dict[3]="54.172.191.10" #nx3
-	access_dict[3]="128.46.74.95" #agx
-	#access_dict[4]="128.46.32.175" #server
+	access_dict[3]="128.46.74.95"  #agx
 	access_dict[4]="128.46.32.175" #ashraf server
-	#access_dict[5]="44.204.119.25" #t22
-
+	access_dict[5]="128.46.73.218" #orchestrator
+	
+	global_var.device_list=[]
+	global_var.socket_list = []
 	global_var.IDENTIFIER = num_edge_max
-	access_dict[5]="128.46.73.218"
+	global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
 
 	for each in access_dict.keys():
 		global_var.device_list.append(access_dict[each])
 
-
-	global_var.socket_list = []
+	# creat connection socket for each edge device
 	for i in range(num_edge_max):
 		s = socket_connections(access_dict[i],5001)
 		global_var.socket_list.append(s)
+
+	# creat listening thread for each device
 	for i in range(num_edge_max):
 		Thread(target = connection_listening_thread, args=(global_var.socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 
 
 	dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list=loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,task_file_dic,access_dict)
 
-
-	#ntwk_test=network_test()
-	global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
-	#global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
-
+	# send identifier to each device, every device aware the presence of other devices
 	for idx,each in enumerate(global_var.socket_list):
 		send_label(global_var.socket_list[idx],idx)
 		send_files(global_var.socket_list[idx],edge_list)
+
+	# send the application related files to each device, this only nee to be done one time
 	for idx,each in enumerate(global_var.socket_list):
 		send_files(global_var.socket_list[idx],dependency_file)
 		send_files(global_var.socket_list[idx],task_file)
@@ -966,6 +1016,7 @@ if __name__ =='__main__':
 		send_files(global_var.socket_list[idx],input_lp)
 		send_files(global_var.socket_list[idx],output_lp)
 
+	# start the network speed test
 	periodic_network_test()
 
 	#generate the random task arrival time 
@@ -1036,7 +1087,7 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 		if args.sch == "ibdash":
-			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
+			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup,global_var.in_out_history,input_lookup)
 		if args.sch == "petrel":
 			time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lavea":

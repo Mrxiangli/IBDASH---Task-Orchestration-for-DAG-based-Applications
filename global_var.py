@@ -3,3 +3,4 @@ def initialize():
 	global IDENTIFIER
 	global device_list
 	global socket_list
+	global in_out_history

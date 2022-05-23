@@ -16,8 +16,6 @@ import subprocess
 import os
 import sys
 import socket
-import tqdm
-import pdb
 import time
 from threading import Thread
 import threading
@@ -29,9 +27,7 @@ import ast
 pp = pprint.PrettyPrinter(indent=4)
 
 PING_PACKET_SIZE=64
-
-
-
+lock = threading.Lock()
 
 # this function insert and edge device to the ED_m and ED_c matrix
 def insert_edge_device(ED_m, ED_c, num_edge,new_edm_info, new_edc_info, ed_dict, ed_info):
@@ -58,7 +54,6 @@ def extract_blocks(row_s, row_e, col_s, col_e, block):
 		if i>= row_s and i <= row_e:
 			new_array=np.append(new_array,[block[i][col_s:col_e+1]],axis=0)
 	return new_array
-
 
 # this did not pass exhaustive test, need to test on the reliability of this code
 def insert_task(ED_m, ED_c, num_edge, num_task, new_edm_info, new_edc_info):
@@ -370,13 +365,14 @@ def socket_connections(host,port):
 
 
 def send_files(s,filename):
+	
 	SEPARATOR = "<SEPARATOR>"
 	BUFFER_SIZE = 65536 # send 4096 bytes each time step
 	NAME_SIZE = 256
-
+	
+	lock.acquire()
 	filesize = os.path.getsize(filename)
 	name=f"{filename}{SEPARATOR}{filesize}{SEPARATOR}".ljust(NAME_SIZE).encode()
-	print(f"sending {filename}")
 	s.send("F".encode())
 	s.send(name)
 
@@ -384,19 +380,45 @@ def send_files(s,filename):
 		bytes_read = f.read(filesize)
 		s.sendall(bytes_read)
 	s.send("/EOF".encode())
+	lock.release()
 
 
 def send_command(s,msg):
 	SEPARATOR = "<SEPARATOR>"
 	BUFFER_SIZE = 4096 # send 4096 bytes each time step
 	MSG_SIZE = 256
+	lock.acquire()
 	s.send("C".encode())
 	s.send(msg.ljust(MSG_SIZE).encode())
+	lock.release()
+
+def send_size_update(s,input,output,task):
+	SEPARATOR = "<SEPARATOR>"
+	BUFFER_SIZE = 4096 # send 4096 bytes each time step
+	MSG_SIZE = 1024
+	TASK_ID_SIZE = 10
+	lock.acquire()
+	s.send("S".encode())
+	s.send(str(task).encode().ljust(TASK_ID_SIZE))
+	s.send(input.ljust(MSG_SIZE))
+	s.send(output.ljust(MSG_SIZE))
+	lock.release()
 
 def send_label(s,label):
 	LABEL_SIZE = 256
+	lock.acquire()
 	s.send("L".encode())
 	s.send(str(label).ljust(LABEL_SIZE).encode())
+	lock.release()
+
+def send_clean_command(instance_count):
+	MSG_SIZE = 256
+	for s in global_var.socket_list:
+		lock.acquire()
+		s.send("X".encode())
+		clean_command = f"rm -r $(ls | grep '_{instance_count}.jpg\|_{instance_count}.mp4\|_{instance_count}.txt\|allocation_{instance_count}.json')"
+		s.send(clean_command.ljust(MSG_SIZE).encode())
+		lock.release()
 
 def send_ntwk_test(s):
 	LABEL_SIZE = 256
@@ -428,7 +450,6 @@ def connection_creation_thread(connection_queue):
 		print(f"size of queue: {connection_queue.qsize()}")
 
 def spawn_listening_thread(connection_queue):
-	print("sssss")
 	while True:
 		#print(f"size of queue: {connection_queue.qsize()}")
 		while connection_queue.qsize() != 0:
@@ -441,16 +462,19 @@ def connection_listening_thread(client_socket,address):
 	BUFFER_SIZE = 65536
 	NAME_SIZE = 256
 	LABEL_SIZE = 256
+	REQUEST_SIZE=1024
 	SEPARATOR = "<SEPARATOR>"
+	TASK_ID_SIZE=10
 
 	print(f"socket at {address} is being listened")
 
 	while True:
 		msg_type = client_socket.recv(1).decode()
-		if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L" and msg_type != "T":
-			print(f"msg: {len(msg_type)}")
+		if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L" and msg_type != "T" and msg_type != "U":
+
 			print(f"msg: {msg_type}")
 			print(f"socket {client_socket} out of sync")
+			sys.exit()
 		if msg_type == 'T':
 			received_id = client_socket.recv(NAME_SIZE).decode()
 			test_result = client_socket.recv(NAME_SIZE).decode()
@@ -460,6 +484,42 @@ def connection_listening_thread(client_socket,address):
 					pass
 				else:
 					global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
+		
+		if msg_type == "R":
+				sender_id = client_socket.recv(NAME_SIZE).decode()
+				file_requested = client_socket.recv(NAME_SIZE).decode().strip()
+				if os.path.exists(str(file_requested)) == True:
+					send_files(client_socket,str(file_requested))
+		
+		if msg_type == 'U':
+			tk_id = client_socket.recv(TASK_ID_SIZE).decode()
+			input_size = ast.literal_eval(client_socket.recv(REQUEST_SIZE).decode().strip())
+			output_size = ast.literal_eval(client_socket.recv(REQUEST_SIZE).decode().strip())
+			print("===============================================================")
+			print(f"input size: {input_size}")
+			print(f"output size: {output_size}")
+			#ensure the length is the same
+			if len(input_size.keys())==len(global_var.in_out_history[int(tk_id)]['input'].keys()):
+				input_size_list = []
+				for each_key in input_size.keys():
+					input_size_list.append(float(input_size[each_key]))
+				for each_key in global_var.in_out_history[int(tk_id)]['input'].keys():
+					if len(global_var.in_out_history[int(tk_id)]['input'][each_key]) > 20:
+						for i in range(10):
+							global_var.in_out_history[int(tk_id)]['input'][each_key].pop(0)
+					else:
+						global_var.in_out_history[int(tk_id)]['input'][each_key].append(input_size_list.pop(0))
+			
+			if len(output_size.keys())==len(global_var.in_out_history[int(tk_id)]['output'].keys()):
+				output_size_list = []
+				for each_key in output_size.keys():
+					output_size_list.append(float(output_size[each_key]))
+				for each_key in global_var.in_out_history[int(tk_id)]['output'].keys():
+					if len(global_var.in_out_history[int(tk_id)]['output'][each_key]) > 20:
+						for i in range(10):
+							global_var.in_out_history[int(tk_id)]['output'][each_key].pop(0)
+					else:
+						global_var.in_out_history[int(tk_id)]['output'][each_key].append(output_size_list.pop(0))
 
 		if msg_type == 'F':
 			start = time.time()
@@ -467,6 +527,7 @@ def connection_listening_thread(client_socket,address):
 			filename, filesize, space = received.split(SEPARATOR)
 			# remove absolute path if there is
 			filename = os.path.basename(filename)
+			instance_count = int(filename.split('_')[-1].split('.')[0])
 			# convert to integer
 			filesize = int(filesize)
 			
@@ -475,9 +536,6 @@ def connection_listening_thread(client_socket,address):
 			count = 0
 			bytes_read = b''
 			with open(filename, "wb") as f:
-				#bytes_read = client_socket.recv(filesize)
-				#print(len(bytes_read.decode()))
-				#print(len(bytes_read))
 				counter = 0
 				while (filesize - received_size) > BUFFER_SIZE:
 					bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
@@ -502,7 +560,8 @@ def connection_listening_thread(client_socket,address):
 					if bytes_read.decode() != "/EOF":
 						print(f" error transmitting {filename}")
 			print(f"{filename} is received at {time.time()}")
-
+			send_clean_command(instance_count)
+			#as this take result back, which means one application instance is all done remove all the meta files
 	s.close()
 
 def network_test():
@@ -568,3 +627,58 @@ def periodic_network_test():
 	for idx in range(len(global_var.socket_list)):
 		send_ntwk_test(global_var.socket_list[idx])
 	print(global_var.ntwk_matrix)
+
+def creat_input_output_regression_history(app_path,dependency_dic,input_lookup,output_lookup):
+	inout={}
+	for task in dependency_dic.keys():
+		if dependency_dic[task]== [None]:
+			inout[task]={"input":{}, "output":{}}
+			input_file_list = input_lookup[str(task)]
+			output_file_list = output_lookup[str(task)]
+			for each_inputfile in input_file_list:
+				input_file = each_inputfile[0]+each_inputfile[2]
+				each_filesize=os.path.getsize(os.path.join(app_path,input_file))
+				if input_file not in inout[task]["input"].keys():
+					inout[task]["input"][input_file]=[]	#b to Mb 
+				else:
+					inout[task]["input"][input_file].append([])
+			for each_outputfile in output_file_list:
+					output_file = each_outputfile[0]
+					if output_file not in inout[task]["input"].keys():
+						inout[task]["output"][output_file]=[]	
+		else:
+			inout[task]={"input":{}, "output":{}}
+			input_file_list = input_lookup[str(task)]
+			output_file_list = output_lookup[str(task)]
+			for each_inputfile in input_file_list:
+					input_file = each_inputfile[0]
+					if input_file not in inout[task]["input"].keys():
+						inout[task]["input"][input_file]=[]	
+			for each_outputfile in output_file_list:
+					output_file = each_outputfile[0]
+					if output_file not in inout[task]["input"].keys():
+						inout[task]["output"][output_file]=[]	
+	return inout
+
+def update_input_output_regression_history(socket_list,instance_count,dependency_dic,dispatcher_dic,input_lookup,output_lookup):
+	instance_count=instance_count-9
+	for task in dependency_dic.keys():
+			input_file_list = input_lookup[str(task)]
+			input_size_request_list=[]
+			for each_inputfile in input_file_list:
+				if each_inputfile[1] != 0:
+					input_file = each_inputfile[0]+str(instance_count)+each_inputfile[2]
+				else:
+					input_file = each_inputfile[0]+each_inputfile[2]
+				input_size_request_list.append(input_file)
+			output_file_list = output_lookup[str(task)]
+			output_size_request_list=[]
+			for each_outputfile in output_file_list:
+				output_file = each_outputfile[0]+str(instance_count)+each_outputfile[2]
+				output_size_request_list.append(output_file)
+			task_allocation = dispatcher_dic[instance_count][str(task)]
+			#use the lowest latency allocation to ensure the update pace is fast
+			send_size_update(socket_list[int(task_allocation[0])],str(input_size_request_list).encode(),str(output_size_request_list).encode(),task)
+			#print(f"+=========task {task}==========+")
+			#print(input_size_request_list)
+			#print(output_size_request_list)
