@@ -15,8 +15,8 @@ cmd = ""
 back_pro=[0,1,2,3,4,5,6,7,8]
 x_ax = [0,1,2,3,4,5,6,7,8]
 prof_num=1
-prof_tk = ["video_split.py --count 0", "extract_frame_1.py --count 0",  "extract_frame_2.py --count 0",  "extract_frame_3.py --count 0","img_class_1.py --count 0", "img_class_2.py --count 0", "img_class_3.py --count 0", "gathering_result.py --count 0"]
-base_tk_list = ["video_split.py --count 0 &", "extract_frame_1.py --count 0 &", "extract_frame_2.py --count 0 &","extract_frame_3.py --count 0 &", "img_class_1.py --count 0 &","img_class_2.py --count 0 &","img_class_3.py --count 0 &" ,"gathering_result.py --count 0 &"]
+prof_tk = ["input_split.py --count 0", "map1.py --count 0",  "map2.py --count 0",  "map3.py --count 0","map4.py --count 0", "reduce1.py --count 0", "reduce2.py --count 0", "combine.py --count 0"]
+base_tk_list = ["input_split.py --count 0 &", "map1.py --count 0 &",  "map2.py --count 0 &",  "map3.py --count 0 &","map4.py --count 0 &", "reduce1.py --count 0 &", "reduce2.py --count 0 &", "combine.py --count 0 &"]
 for base_tk in base_tk_list:
 	mc_dic={}
 	for profile_file in prof_tk:
@@ -44,6 +44,3 @@ for base_tk in base_tk_list:
 		edc.write(row,col,round(coef[1]*scale,0))
 		col+=1
 workbook.close()			
-
-
-

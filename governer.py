@@ -1,23 +1,20 @@
-import argparse
-import configparser
 import json
 import subprocess
 import sys
-#import paramiko
-#from scp import SCPClient
 import errno
 import socket
 import os
-from threading import Thread
-from queue import PriorityQueue, Queue
 import time
 import threading
 import ast
-from icmplib import ping, multiping
+
+from icmplib import ping
 from multiprocessing import Process
+from threading import Thread
+from queue import PriorityQueue, Queue
 
 IDENTIFIER = -1
-device_list=[]
+device_list = []
 
 lock = threading.Lock()
 
@@ -56,8 +53,6 @@ def network_test(device_list):
 	return p2p_test
 
 def send_size_update(s,input,output,task):
-	SEPARATOR = "<SEPARATOR>"
-	BUFFER_SIZE = 4096 # send 4096 bytes each time step
 	MSG_SIZE = 1024
 	TASK_ID_SIZE=10
 	global lock
@@ -71,7 +66,6 @@ def send_size_update(s,input,output,task):
 def send_files(s,filename):
 	global lock
 	SEPARATOR = "<SEPARATOR>"
-	BUFFER_SIZE = 65536 # send 4096 bytes each time step
 	NAME_SIZE = 256
 	filesize = os.path.getsize(filename)
 	print(f"{filename} is send at {time.time()}")
@@ -79,12 +73,9 @@ def send_files(s,filename):
 	lock.acquire()
 	s.send("F".encode())
 	s.send(name)
-	counter = 0
 	with open(filename, "rb") as f:
 		bytes_read = f.read(filesize)
-		start = time.time()
 		s.sendall(bytes_read)
-		end = time.time()
 	s.send("/EOF".encode())
 	lock.release()
 
@@ -98,7 +89,6 @@ def update_size_proc(tk_id, input_request,output_request,client_socket):
 		if os.path.exists(each) == True:
 			output_size_list[each]=round(os.path.getsize(each)/1048576,2)
 	send_size_update(client_socket,str(input_size_list).encode(),str(output_size_list).encode(),tk_id)
-
 
 def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 	#Receiving files
@@ -385,6 +375,11 @@ def processing_thread(command,socket_list):
 		output_file_list=output_lookup[str(tk_num)]
 		for each_output in output_file_list:
 			output_file=f"{each_output[0]}{instance_count}{each_output[2]}"
+			result_wait_start = time.time()
+			while os.path.exists(output_file) == False:
+				if time.time() - result_wait_start > 30:
+					print(f"{output_file} is not produced with in time limit, exiting!")
+					sys.exit()
 			send_files(socket_list[-1],output_file)
 			print(f"Send result:{output_file} of instance {instance_count} back to orchestrator")
 

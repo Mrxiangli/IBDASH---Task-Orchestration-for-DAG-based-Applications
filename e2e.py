@@ -2,6 +2,7 @@ import os.path
 import subprocess
 import argparse
 import configparser
+import time
 
 if __name__ =='__main__':
 	parser = argparse.ArgumentParser()
@@ -25,14 +26,27 @@ if __name__ =='__main__':
 
 	time_list = []
 
+	prev_length=instance_count
+	timer_start = time.time()
+	result_received = 0
 	while result_list != []:
+		new_length = len(result_list)
+		new_timer=time.time()
+		if new_length != prev_length:
+			prev_length = new_length
+			timer_start = new_timer
+
 		for each in result_list:
 			if os.path.exists(each):
+				result_received+=1
+				print(f"received {result_received}/{instance_count}.")
 				p=subprocess.Popen(["date +%s%N"],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 				out,err = p.communicate()
 				result_list.remove(each)
 				instance = each.split('_')[-1].split('.')[0]
 				time_list.append([instance,out.decode("utf-8")])
+		if new_timer - timer_start > 180:
+			break
 				
 	time_file = open(timefile,"a")
 

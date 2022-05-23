@@ -1,16 +1,37 @@
 import pandas as pd
 import os 
 import time as timer
+import argparse
+import json
+import random as rd
 
-start=timer.time()
-df=pd.read_csv('baccalaureate2021.csv', low_memory=False)
-result_frame_lt1000= df[df['pozitie_judet']<1000]
-result_frame_gt1000= df[df['pozitie_judet']>1000]
-path_parent = os.getcwd()
-file_path1="output1/map2_lt1000.csv"  
-file_path2="output2/map2_gt1000.csv" 
-result_frame_lt1000.to_csv(os.path.join(path_parent,file_path1),index=False)
-result_frame_gt1000.to_csv(os.path.join(path_parent,file_path2),index=False)
-end=timer.time()
-print("map2: "+str((end-start)/100))
+def mapping(file, count):
+    result={}
+    df = pd.read_csv(file)
+    for idx,row in df.iterrows():
+        if row['Country/Region'] not in result.keys():
+            result[row['Country/Region']]={"Confirmed":0,"Deaths":0,"Recovered":0}
+            result[row['Country/Region']]["Confirmed"]+=row['Confirmed']
+            result[row['Country/Region']]["Deaths"]+=row['Deaths']
+            result[row['Country/Region']]["Recovered"]+=row['Recovered']
+        else:
+            result[row['Country/Region']]["Confirmed"]+=row['Confirmed']
+            result[row['Country/Region']]["Deaths"]+=row['Deaths']
+            result[row['Country/Region']]["Recovered"]+=row['Recovered']
+  #  with open(f"split_output_2_{count}.json","w") as outfile:
+    with open(f"split_output_2_{count}_{rd.randint(1,10000)}.json","w") as outfile:
+        json.dump(result, outfile)
 
+
+
+if __name__ =='__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--count', type=int, help='instance_count')
+    args = parser.parse_args()
+
+    file=f'split_input_2_{args.count}.csv'
+    start=timer.time()
+    mapping(file, args.count)
+    end=timer.time()
+    print("map2: "+str((end-start)))
