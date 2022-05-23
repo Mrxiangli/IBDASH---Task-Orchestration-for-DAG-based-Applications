@@ -18,7 +18,9 @@ if __name__ =='__main__':
 		if args.app == "lightgbm":
 			file = "predict_{}.txt".format(i)
 		if args.app == "video":
-			file = "analytic_result_{}.txt".format(i)	
+			file = "analytic_result_{}.txt".format(i)
+		if args.app == "mapreduce":
+			file = "mapreduce_result_{}.txt".format(i)	
 		result_list.append(file) 
 
 	current_dir = os.getcwd()
