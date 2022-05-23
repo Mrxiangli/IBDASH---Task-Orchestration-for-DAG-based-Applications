@@ -22,6 +22,7 @@ device_list=[]
 lock = threading.Lock()
 
 def json_file_loader(file):
+	print(file)
 	data = json.load(open(file))
 	return data
 
@@ -54,6 +55,19 @@ def network_test(device_list):
 		p2p_test[idx]=round(((1024/(result.avg_rtt/2))*1000)/1000000,2)
 	return p2p_test
 
+def send_size_update(s,input,output,task):
+	SEPARATOR = "<SEPARATOR>"
+	BUFFER_SIZE = 4096 # send 4096 bytes each time step
+	MSG_SIZE = 1024
+	TASK_ID_SIZE=10
+	global lock
+	lock.acquire()
+	s.send("U".encode())
+	s.send(str(task).encode().ljust(TASK_ID_SIZE))
+	s.send(input.ljust(MSG_SIZE))
+	s.send(output.ljust(MSG_SIZE))
+	lock.release()
+
 def send_files(s,filename):
 	global lock
 	SEPARATOR = "<SEPARATOR>"
@@ -73,6 +87,18 @@ def send_files(s,filename):
 		end = time.time()
 	s.send("/EOF".encode())
 	lock.release()
+
+def update_size_proc(tk_id, input_request,output_request,client_socket):
+	input_size_list={}
+	output_size_list={}
+	for each in input_request:
+		if os.path.exists(each) == True:
+			input_size_list[each]=round(os.path.getsize(each)/1048576,2)
+	for each in output_request:
+		if os.path.exists(each) == True:
+			output_size_list[each]=round(os.path.getsize(each)/1048576,2)
+	send_size_update(client_socket,str(input_size_list).encode(),str(output_size_list).encode(),tk_id)
+
 
 def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 	#Receiving files
@@ -103,6 +129,7 @@ def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 		print(f"{filename} is received")
 		if received_size == filesize:
 			bytes_read = client_socket.recv(4)
+			print(bytes_read)
 			if bytes_read.decode() != "/EOF":
 				print(f" error transmitting {filename}, exiting")
 				sys.exit()
@@ -173,7 +200,6 @@ def connection_creation_thread(connection_queue, socket_q):
 		socket_q.put([client_socket,address])
 
 def spawn_listening_thread(connection_queue, command_queue):
-	print("sssss")
 	while True:
 		while connection_queue.qsize() != 0:
 			print("waiting for connection queue to be filled")
@@ -185,17 +211,15 @@ def spawn_command_thread(command_queue,socket_list):
 	prev_command = {}
 	while True:
 		while command_queue.qsize() != 0:
-			print(f"command queue: {command_queue}")
 			command = ast.literal_eval(command_queue.get())[1]
-			print(f"command: {command}")
-			print(f"getting command < {command} > out")
+			print(f"getting command < {command} > ")
 			if command not in prev_command.keys():
 				prev_command[command] = 1
 			else:
 				prev_command[command] +=1
-			print(f"split {command.split(' ')[-1]}")
 			print(f"prev command: {prev_command}")
 			if int(command.split(' ')[-1]) == prev_command[command]:
+				prev_command.pop(command)
 				Thread(target = processing_thread, args=(command,socket_list,)).start() #for each
 
 def connection_listening_thread(client_socket,address, command_queue):
@@ -206,6 +230,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 	NAME_SIZE = 256
 	LABEL_SIZE = 256
 	MSG_SIZE = 256
+	REQUEST_SIZE=1024
+	TASK_ID_SIZE=10
 	SEPARATOR = "<SEPARATOR>"
 
 	print(f"socket at {address} is being listened")
@@ -214,18 +240,7 @@ def connection_listening_thread(client_socket,address, command_queue):
 		if CONNNECTION_EASTABLISHED == True:
 			msg_type = client_socket.recv(1).decode()
 			print(f"msg: {msg_type}")
-			if msg_type == "P":
-				p = Process(target=network_speed_test, args=(device_list,))
-				p.start()
-				p.join()
-
-			elif msg_type == "R":
-				sender_id = client_socket.recv(NAME_SIZE).decode()
-				file_requested = client_socket.recv(NAME_SIZE).decode().strip()
-				if os.path.exists(str(file_requested)) == True:
-					send_files(client_socket,str(file_requested))
-
-			elif msg_type == 'F':
+			if msg_type == 'F':
 				print("###########################################")
 				start = time.time()
 				received = client_socket.recv(NAME_SIZE).decode()
@@ -235,6 +250,22 @@ def connection_listening_thread(client_socket,address, command_queue):
 				print(f"Receiving file: {received}")
 				filesize = int(filesize)
 				receive_files(filesize,BUFFER_SIZE,filename,client_socket)
+			elif msg_type == "P":
+				p = Process(target=network_speed_test, args=(device_list,))
+				p.start()
+
+			elif msg_type == "R":
+				sender_id = client_socket.recv(NAME_SIZE).decode()
+				file_requested = client_socket.recv(NAME_SIZE).decode().strip()
+				if os.path.exists(str(file_requested)) == True:
+					send_files(client_socket,str(file_requested))
+			
+			elif msg_type == "S":
+				tk_id = client_socket.recv(TASK_ID_SIZE).decode()
+				input_request = ast.literal_eval(client_socket.recv(REQUEST_SIZE).decode().strip())
+				output_request = ast.literal_eval(client_socket.recv(REQUEST_SIZE).decode().strip())
+				p = Process(target=update_size_proc, args=(tk_id, input_request,output_request,client_socket,))
+				p.start()			
 				
 			elif msg_type == "C":
 				command = client_socket.recv(MSG_SIZE).decode()
@@ -247,9 +278,13 @@ def connection_listening_thread(client_socket,address, command_queue):
 				IDENTIFIER = int(label)
 				print(f"IDENTIFIER of this device: {IDENTIFIER}")
 				CONNNECTION_EASTABLISHED = False
+			
+			elif msg_type == "X":
+				command = client_socket.recv(MSG_SIZE).decode().strip()
+				p=subprocess.Popen([command],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 
 			else:
-				print(f'transmission error, unrecognizable message type: {msg_type}, exiting')
+				print(f'transmission error, unrecognizable message type: {msg_type} from {client_socket}, exiting')
 				sys.exit()
 
 	client_socket.close()
@@ -261,7 +296,7 @@ def processing_thread(command,socket_list):
 	depend_lookup=json_file_loader("depend_lookup.json")
 	input_lookup=json_file_loader("input_lookup.json")
 	output_lookup=json_file_loader("output_lookup.json")
-	#command = command.split("/EOC")[0]
+
 	print(f"{command.strip()} thread is created")
 
 	# loading all the json files to get the status of the allocation
@@ -272,14 +307,19 @@ def processing_thread(command,socket_list):
 	try:
 		allocation_dic=json_file_loader(allocation_file)
 	except FileNotFoundError:
-		print(f"{allocation_file} cannot be found on the device, exiting")
-		sys.exit()
+		start_time = time.time()
+		while os.path.exists(allocation_file) == False:
+			if time.time() - start_time > 40:
+				send_resend_request(socket_list[-1],IDENTIFIER,allocation_file)	#request orchestator resend the allocation file
+			if time.time() - start_time > 80:
+				print(f"{allocation_file} cannot be found on the device, exiting")
+				sys.exit()
 	
 	#running a check to see if all input files are available; if missing, try to retrieve from replicated service
 	for input_file in input_lookup[str(tk_num)]:
 		# check non-meta files
 		if input_file[1] == 0:					
-			if os.path.exists(input_file[0]):
+			if os.path.exists(input_file[0]+input_file[2]):
 				pass
 			else:																				
 				raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), input_file[0])
@@ -338,7 +378,7 @@ def processing_thread(command,socket_list):
 
 	#looking for the dependency and find the next device and task
 	next_stage_dict=next_task(tk_num,depend_lookup,input_lookup)
-	print(f"current tk: {tk_num}, next_stage_dict:{next_stage_dict}")
+	#print(f"current tk: {tk_num}, next_stage_dict:{next_stage_dict}")
 
 	#if current task is the last task
 	if len(next_stage_dict) == 0:
