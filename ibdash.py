@@ -967,7 +967,7 @@ if __name__ =='__main__':
 	# The following parameters can be used to tune the simulation
 	random.seed(0)
 	ntbd = 600							#network bandwidth
-	app_inst_time = 200				#the period of time that application instances might arrive
+	app_inst_time = 250				#the period of time that application instances might arrive
 	sim_time = 20000					#simulation period
 	num_arrivals = 100					#number of application instances arrived during app_ins_time	
 	pF_thrs = args.pf					#probability of failure threshold
@@ -1073,7 +1073,6 @@ if __name__ =='__main__':
 		for i in range(num_edge):
 			pf_ed[i]=lam2[i]*np.exp(-1*lam2[i]*pf_time)
 			pf_ed_tk[i]= 1-np.exp(-1*lam2[i]*pf_time)				
-
 
 		pf_time = np.arange(0, sim_time/1000, 0.001)
 

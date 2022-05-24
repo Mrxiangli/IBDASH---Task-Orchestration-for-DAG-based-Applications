@@ -18,8 +18,8 @@ def mapping(file, count):
             result[row['Country/Region']]["Confirmed"]+=row['Confirmed']
             result[row['Country/Region']]["Deaths"]+=row['Deaths']
             result[row['Country/Region']]["Recovered"]+=row['Recovered']
-    #with open(f"split_output_4_{count}.json","w") as outfile:
-    with open(f"split_output_4_{count}_{rd.randint(1,10000)}.json","w") as outfile:
+    with open(f"split_output_4_{count}.json","w") as outfile:
+    #with open(f"split_output_4_{count}_{rd.randint(1,10000)}.json","w") as outfile:
         json.dump(result, outfile)
 
 
