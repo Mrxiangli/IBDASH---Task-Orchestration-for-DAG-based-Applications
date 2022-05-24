@@ -19,11 +19,11 @@ def split(file, count):
     data_frame_4.to_csv(f"split_input_4_{count}.csv")
 
     #for profiling
-    rand = rd.randint(1,10000)
-    data_frame_1.to_csv(f"split_input_1_{rand}.csv")
-    data_frame_2.to_csv(f"split_input_2_{rand}.csv")
-    data_frame_3.to_csv(f"split_input_3_{rand}.csv")
-    data_frame_4.to_csv(f"split_input_4_{rand}.csv")
+    # rand = rd.randint(1,10000)
+    # data_frame_1.to_csv(f"split_input_1_{rand}.csv")
+    # data_frame_2.to_csv(f"split_input_2_{rand}.csv")
+    # data_frame_3.to_csv(f"split_input _3_{rand}.csv")
+    # data_frame_4.to_csv(f"split_input_4_{rand}.csv")
 
 
 

@@ -132,7 +132,6 @@ def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 		print(f"{filename} is received")
 		if received_size == filesize:
 			bytes_read = client_socket.recv(4)
-			print(bytes_read)
 			if bytes_read.decode() != "/EOF":
 				print(f" error transmitting {filename}, exiting")
 				sys.exit()
@@ -284,7 +283,7 @@ def connection_listening_thread(client_socket,address, command_queue):
 				print(f'transmission error, unrecognizable message type: {msg_type} from {client_socket}, exiting')
 				sys.exit()
 
-		client_socket.close()
+	client_socket.close()
 
 def processing_thread(command,socket_list):
 	global IDENTIFIER

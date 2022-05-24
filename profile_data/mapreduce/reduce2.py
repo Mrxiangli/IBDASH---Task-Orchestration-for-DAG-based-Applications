@@ -23,8 +23,8 @@ def reducing(file1,file2,file3,file4,count):
 		result1['US']['Deaths']+=each['US']['Deaths']
 		result1['US']['Recovered']+=each['US']['Recovered']
 
-	#with open(f"us_result_{count}.json","w") as outfile:
-	with open(f"us_{count}_{rd.randint(1,10000)}.json","w") as outfile:
+	with open(f"us_result_{count}.json","w") as outfile:
+	#with open(f"us_{count}_{rd.randint(1,10000)}.json","w") as outfile:
 		json.dump(result1, outfile)
 
 if __name__ =='__main__':

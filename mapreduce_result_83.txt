@@ -1,0 +1,1 @@
+{"Mainland China": {"Confirmed": 40822596, "Deaths": 2089872, "Recovered": 36897441}}{"US": {"Confirmed": 6049145667, "Deaths": 123303762, "Recovered": 503370956}}

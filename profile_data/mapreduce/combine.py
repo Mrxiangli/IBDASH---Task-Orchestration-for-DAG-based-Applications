@@ -14,8 +14,8 @@ def combine(file1,file2,count):
     dic2 = json.load(f2)
     dic_list=[dic1,dic2]
 
-    #with open(f"mapreduce_result_{count}.json","w") as outfile:
-    with open(f"mapreduce_result_{count}_{rd.randint(1,10000)}.txt","w") as outfile:
+    with open(f"mapreduce_result_{count}.txt","w") as outfile:
+    #with open(f"mapreduce_result_{count}_{rd.randint(1,10000)}.txt","w") as outfile:
         for each in dic_list:
             outfile.write(json.dumps(each))
 

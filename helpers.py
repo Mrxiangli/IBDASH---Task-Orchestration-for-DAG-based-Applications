@@ -238,9 +238,10 @@ def latency_regression_setup(task_types,num_edge, EDmc_path):
 # build dependency dictionary
 def dependency_dic(app_data,task_dict):
 	dependency_dic=dict()
+	print(f"dict: {task_dict}")
 	# The following code are for dependency purpose
 	for main_task in app_data['Application']['Edges']:
-		#print(f"main_task:{main_task}")
+		print(f"main_task:{main_task}")
 		if main_task != 'end':
 			if main_task == 's':
 				for depend_task in app_data['Application']['Edges'][main_task]:
@@ -251,7 +252,7 @@ def dependency_dic(app_data,task_dict):
 			if main_task != 's' and main_task != 'end':
 				for depend_task in app_data['Application']['Edges'][main_task]:
 					if depend_task != "end":
-						#print(f"depend task: {depend_task}")
+						print(f"depend task: {depend_task}")
 						if int(depend_task) not in dependency_dic.keys():
 							dependency_dic[int(depend_task)]=[(main_task,task_dict[depend_task][2][main_task])]
 							# the second value is used to track the type of dependency
@@ -416,7 +417,7 @@ def send_clean_command(instance_count):
 	for s in global_var.socket_list:
 		lock.acquire()
 		s.send("X".encode())
-		clean_command = f"rm -r $(ls | grep '_{instance_count}.jpg\|_{instance_count}.mp4\|_{instance_count}.txt\|allocation_{instance_count}.json')"
+		clean_command = f"rm -r $(ls | grep '_{instance_count}.jpg\|_{instance_count}.mp4\|_{instance_count}.txt\|allocation_{instance_count}.json\|_{instance_count}.csv')"
 		s.send(clean_command.ljust(MSG_SIZE).encode())
 		lock.release()
 
