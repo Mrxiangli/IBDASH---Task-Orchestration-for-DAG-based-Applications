@@ -99,6 +99,7 @@
           "model": ["None",0],
           "depend":{"7":1},
           "input":[["mapreduce_result_",1]],
+          "output":[],
           "param": {}
         }
       ]

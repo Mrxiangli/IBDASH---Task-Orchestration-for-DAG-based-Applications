@@ -417,7 +417,7 @@ def send_clean_command(instance_count):
 	for s in global_var.socket_list:
 		lock.acquire()
 		s.send("X".encode())
-		clean_command = f"rm -r $(ls | grep '_{instance_count}.jpg\|_{instance_count}.mp4\|_{instance_count}.txt\|allocation_{instance_count}.json\|_{instance_count}.csv')"
+		clean_command = f"rm -r $(ls | grep '_{instance_count}.jpg\|_{instance_count}.mp4\|_{instance_count}.txt\|_{instance_count}.json\|_{instance_count}.csv')"
 		s.send(clean_command.ljust(MSG_SIZE).encode())
 		lock.release()
 
@@ -475,10 +475,12 @@ def connection_listening_thread(client_socket,address):
 
 			print(f"msg: {msg_type}")
 			print(f"socket {client_socket} out of sync")
-			sys.exit()
+			return -1
+			#sys.exit()
+
 		if msg_type == 'T':
-			received_id = client_socket.recv(NAME_SIZE).decode()
-			test_result = client_socket.recv(NAME_SIZE).decode()
+			received_id = receive_request(NAME_SIZE,client_socket).decode()
+			test_result = receive_request(NAME_SIZE,client_socket).decode()
 			p2p_result=ast.literal_eval(test_result)
 			for key in p2p_result.keys():
 				if key == int(received_id):
@@ -487,40 +489,46 @@ def connection_listening_thread(client_socket,address):
 					global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
 		
 		if msg_type == "R":
-				sender_id = client_socket.recv(NAME_SIZE).decode()
-				file_requested = client_socket.recv(NAME_SIZE).decode().strip()
+				file_requested = receive_request(NAME_SIZE,client_socket).decode().strip()
 				if os.path.exists(str(file_requested)) == True:
 					send_files(client_socket,str(file_requested))
 		
 		if msg_type == 'U':
-			tk_id = client_socket.recv(TASK_ID_SIZE).decode()
-			input_size = ast.literal_eval(client_socket.recv(REQUEST_SIZE).decode().strip())
-			output_size = ast.literal_eval(client_socket.recv(REQUEST_SIZE).decode().strip())
+			tk_id = receive_request(TASK_ID_SIZE,client_socket)
+			#tk_id = client_socket.recv(TASK_ID_SIZE).decode()
+			input_size = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
+			output_size = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
 			print("===============================================================")
 			print(f"input size: {input_size}")
 			print(f"output size: {output_size}")
 			#ensure the length is the same
-			if len(input_size.keys())==len(global_var.in_out_history[int(tk_id)]['input'].keys()):
-				input_size_list = []
-				for each_key in input_size.keys():
-					input_size_list.append(float(input_size[each_key]))
-				for each_key in global_var.in_out_history[int(tk_id)]['input'].keys():
-					if len(global_var.in_out_history[int(tk_id)]['input'][each_key]) > 20:
-						for i in range(10):
-							global_var.in_out_history[int(tk_id)]['input'][each_key].pop(0)
-					else:
-						global_var.in_out_history[int(tk_id)]['input'][each_key].append(input_size_list.pop(0))
+			try:
+				if len(input_size.keys())==len(global_var.in_out_history[int(tk_id)]['input'].keys()):
+					input_size_list = []
+					for each_key in input_size.keys():
+						input_size_list.append(float(input_size[each_key]))
+					for each_key in global_var.in_out_history[int(tk_id)]['input'].keys():
+						if len(global_var.in_out_history[int(tk_id)]['input'][each_key]) > 20:
+							for i in range(10):
+								global_var.in_out_history[int(tk_id)]['input'][each_key].pop(0)
+						else:
+							global_var.in_out_history[int(tk_id)]['input'][each_key].append(input_size_list.pop(0))
+			except:
+				pass
 			
-			if len(output_size.keys())==len(global_var.in_out_history[int(tk_id)]['output'].keys()):
-				output_size_list = []
-				for each_key in output_size.keys():
-					output_size_list.append(float(output_size[each_key]))
-				for each_key in global_var.in_out_history[int(tk_id)]['output'].keys():
-					if len(global_var.in_out_history[int(tk_id)]['output'][each_key]) > 20:
-						for i in range(10):
-							global_var.in_out_history[int(tk_id)]['output'][each_key].pop(0)
-					else:
-						global_var.in_out_history[int(tk_id)]['output'][each_key].append(output_size_list.pop(0))
+			try: 
+				if len(output_size.keys())==len(global_var.in_out_history[int(tk_id)]['output'].keys()):
+					output_size_list = []
+					for each_key in output_size.keys():
+						output_size_list.append(float(output_size[each_key]))
+					for each_key in global_var.in_out_history[int(tk_id)]['output'].keys():
+						if len(global_var.in_out_history[int(tk_id)]['output'][each_key]) > 20:
+							for i in range(10):
+								global_var.in_out_history[int(tk_id)]['output'][each_key].pop(0)
+						else:
+							global_var.in_out_history[int(tk_id)]['output'][each_key].append(output_size_list.pop(0))
+			except:
+				pass
 
 		if msg_type == 'F':
 			start = time.time()
@@ -563,6 +571,7 @@ def connection_listening_thread(client_socket,address):
 			print(f"{filename} is received at {time.time()}")
 			send_clean_command(instance_count)
 			#as this take result back, which means one application instance is all done remove all the meta files
+	print("socket closed ==================================")
 	s.close()
 
 def network_test():
@@ -683,3 +692,9 @@ def update_input_output_regression_history(socket_list,instance_count,dependency
 			#print(f"+=========task {task}==========+")
 			#print(input_size_request_list)
 			#print(output_size_request_list)
+
+def receive_request(size,client_socket):
+	bytes_read = client_socket.recv(size)
+	while size - len(bytes_read) != 0:
+		bytes_read += client_socket.recv(size - len(bytes_read))
+	return bytes_read
