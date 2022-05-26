@@ -47,7 +47,7 @@ if __name__ =='__main__':
 				result_list.remove(each)
 				instance = each.split('_')[-1].split('.')[0]
 				time_list.append([instance,out.decode("utf-8")])
-		if new_timer - timer_start > 180:
+		if new_timer - timer_start > 900:
 			break
 				
 	time_file = open(timefile,"a")

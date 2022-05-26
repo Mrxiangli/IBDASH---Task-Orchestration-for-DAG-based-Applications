@@ -16,6 +16,7 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 	allocate.close()
 	for each_task in allocation.keys():
 		file_path=os.path.join(directory,task_dict[each_task])	
+		# there is redundunt allocation file being send here
 		for ed in allocation[each_task]:
 			send_files(socket_list[ed],allocation_file)
 

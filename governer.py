@@ -106,6 +106,12 @@ def send_files(s,filename):
 	lock.release()
 
 # Utility function for receving files
+def receive_request(size,client_socket):
+	bytes_read = client_socket.recv(size)
+	while size - len(bytes_read) != 0:
+		bytes_read += client_socket.recv(size - len(bytes_read))
+	return bytes_read
+
 def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 	received_size = 0
 	bytes_read = b''
@@ -134,7 +140,8 @@ def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 			bytes_read = client_socket.recv(4)
 			if bytes_read.decode() != "/EOF":
 				print(f" error transmitting {filename}, exiting")
-				sys.exit()
+				client_socket.close()
+				return -1
 
 # Utility functon for sending command
 def send_command(s,msg):
@@ -233,7 +240,7 @@ def connection_listening_thread(client_socket,address, command_queue):
 			print(f"msg: {msg_type}")
 			# receving file
 			if msg_type == 'F':
-				received = client_socket.recv(NAME_SIZE).decode()
+				received = receive_request(NAME_SIZE,client_socket).decode()
 				filename, filesize, space = received.split(SEPARATOR)
 				# remove absolute path if there is any
 				filename = os.path.basename(filename)
@@ -247,42 +254,43 @@ def connection_listening_thread(client_socket,address, command_queue):
 
 			# receiving file request 
 			elif msg_type == "R":
-				sender_id = client_socket.recv(NAME_SIZE).decode()
-				file_requested = client_socket.recv(NAME_SIZE).decode().strip()
+				file_requested = receive_request(NAME_SIZE,client_socket).decode().strip()
 				if os.path.exists(str(file_requested)) == True:
 					send_files(client_socket,str(file_requested))
 			
 			# receiving file size request
 			elif msg_type == "S":
 				tk_id = client_socket.recv(TASK_ID_SIZE).decode()
-				input_request = ast.literal_eval(client_socket.recv(REQUEST_SIZE).decode().strip())
-				output_request = ast.literal_eval(client_socket.recv(REQUEST_SIZE).decode().strip())
+				input_request = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
+				output_request = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
+				#print(f"input request: {input_request}")
+				#print(f"output request: {output_request}")
 				p = Process(target=update_size_proc, args=(tk_id, input_request,output_request,client_socket,))
 				p.start()			
 
 			# receiving command	
 			elif msg_type == "C":
-				command = client_socket.recv(MSG_SIZE).decode()
+				command = receive_request(MSG_SIZE,client_socket).decode()
 				priority=ast.literal_eval(command)[0]
 				real_command = ast.literal_eval(command)[1]
 				command_queue.put(str((priority,real_command)))
 
 			# receiving label of the device
 			elif msg_type == "L":
-				label= client_socket.recv(NAME_SIZE).decode()
+				label= receive_request(NAME_SIZE,client_socket).decode()
 				IDENTIFIER = int(label)
 				print(f"IDENTIFIER of this device: {IDENTIFIER}")
 				CONNNECTION_EASTABLISHED = False
 			
 			# receiving clean command
 			elif msg_type == "X":
-				command = client_socket.recv(MSG_SIZE).decode().strip()
+				command = receive_request(MSG_SIZE,client_socket).decode().strip()
 				p=subprocess.Popen([command],shell=True,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 
 			else:
 				print(f'transmission error, unrecognizable message type: {msg_type} from {client_socket}, exiting')
 				sys.exit()
-
+	print("socket closed =======================================")
 	client_socket.close()
 
 def processing_thread(command,socket_list):
