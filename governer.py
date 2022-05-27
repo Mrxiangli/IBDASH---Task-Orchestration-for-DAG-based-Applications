@@ -249,9 +249,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 
 			# receiving network test request
 			elif msg_type == "P":
-				p = Process(target=network_speed_test, args=(device_list,))
-				p.start()
-
+				Process(target=network_speed_test, args=(device_list,)).start()
+				
 			# receiving file request 
 			elif msg_type == "R":
 				file_requested = receive_request(NAME_SIZE,client_socket).decode().strip()
@@ -263,11 +262,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 				tk_id = client_socket.recv(TASK_ID_SIZE).decode()
 				input_request = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
 				output_request = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
-				#print(f"input request: {input_request}")
-				#print(f"output request: {output_request}")
-				p = Process(target=update_size_proc, args=(tk_id, input_request,output_request,client_socket,))
-				p.start()			
-
+				Thread(target=update_size_proc, args=(tk_id, input_request,output_request,client_socket,)).start()	
+						
 			# receiving command	
 			elif msg_type == "C":
 				command = receive_request(MSG_SIZE,client_socket).decode()
