@@ -1,1 +1,1 @@
-{"s": "NULL", "0": "input_split.py", "1": "map1.py", "2": "map2.py", "3": "map3.py", "4": "map4.py", "5": "reduce1.py", "6": "reduce2.py", "7": "combine.py", "end": "None"}
+{"s": "NULL", "0": "video_split.py", "1": "extract_frame_1.py", "2": "extract_frame_2.py", "3": "extract_frame_3.py", "4": "img_class_1.py", "5": "img_class_2.py", "6": "img_class_3.py", "7": "gathering_result.py", "end": "None"}

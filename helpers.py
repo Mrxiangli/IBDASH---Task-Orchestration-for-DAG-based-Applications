@@ -471,7 +471,7 @@ def connection_listening_thread(client_socket,address):
 
 	while True:
 		msg_type = client_socket.recv(1).decode()
-		if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L" and msg_type != "T" and msg_type != "U":
+		if msg_type != "F" and msg_type !="C" and msg_type!="" and msg_type != "L" and msg_type != "T" and msg_type != "U" and msg_type !="R":
 
 			print(f"msg: {msg_type}")
 			print(f"socket {client_socket} out of sync")
@@ -489,7 +489,9 @@ def connection_listening_thread(client_socket,address):
 					global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
 		
 		if msg_type == "R":
+				
 				file_requested = receive_request(NAME_SIZE,client_socket).decode().strip()
+				print(f"receiving request to resend file {file_requested} ")
 				if os.path.exists(str(file_requested)) == True:
 					send_files(client_socket,str(file_requested))
 		

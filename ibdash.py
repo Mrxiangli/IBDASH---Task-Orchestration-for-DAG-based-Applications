@@ -271,12 +271,10 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			dispatcher_dic[instance_count]=allocation
 
 			#allocation={'0': [0], '1': [1], '2': [0], '3': [1], '4': [0], '5': [1], '6': [0], '7': [1]}
-			#allocation={'0': [1], '1': [1], '2': [4], '3': [4], '4': [4], '5': [1], '6': [1], '7': [4]}
 			print(f"Task allocation for instance {instance_count} : {allocation}")
 			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
 			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
-
 			#print(global_var.in_out_history)
 
 			service_time_ibdash.append(i/1000)

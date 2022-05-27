@@ -14,11 +14,16 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 	with open(allocation_file,'w') as allocate:
 		allocate.write(json.dumps(allocation))
 	allocate.close()
+	tmp_ed=[]
 	for each_task in allocation.keys():
 		file_path=os.path.join(directory,task_dict[each_task])	
 		# there is redundunt allocation file being send here
 		for ed in allocation[each_task]:
-			send_files(socket_list[ed],allocation_file)
+			if ed not in tmp_ed:
+				send_files(socket_list[ed],allocation_file)
+				tmp_ed.append(ed)
+			else:
+				pass
 
 			if ed not in non_meta_files.keys():
 				non_meta_files[ed]=[task_dict[each_task]]
