@@ -9,14 +9,14 @@ To replicate the results shown in the paper, the steps listed below need to be f
 We used python 3.7.2 on both clients' and orchestrator side. To install python 3.7.2, do the following steps
 
 First, install the required packages needed for building python
-```
+```BASH
 $sudo apt-get install build-essential checkinstall
-sudo apt-get install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev liblzma-dev 
+$sudo apt-get install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev liblzma-dev 
 ```
 Then, download python 3.7.2 and install it.
-```
-sudo wget https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz
-sudo ./configure
-sudo make altinstall
+```BASH
+$sudo wget https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz
+$sudo ./configure
+$sudo make altinstall
 ```
 Once it is successfully installed, then install the required packages 
