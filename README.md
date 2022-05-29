@@ -30,8 +30,26 @@ Once it is successfully installed, then install the required packages
 $python3.7 -m pip install --upgrade pip
 $python3.7 -m pip install -r requirements.txt
 ```
-Notice that in one of the sample testing applications (video analytics), MXNET is needed. To install MXNET on arm based architecture, you can download the prebuild whl from [mxnet(arm64)](https://drive.google.com/file/d/1jr-kP1_zlLa9tx-GtdlBV3Nn20qRJgzY/view), 
+Notice that in one of the sample testing applications (video analytics), MXNET is needed. To install MXNET on arm based architecture, you can download the prebuild whl from [mxnet(arm64)](https://drive.google.com/file/d/1jr-kP1_zlLa9tx-GtdlBV3Nn20qRJgzY/view), then install it with 
+```
+python3.7 -m pip install mxnet_xxx.whl
+```
+Now, we have set up the client side, download governer.py and the edge_list.json(the IP addresses contained in this file should be adjusted to the devices in the network, the last device should always refer to the orchestrator), then starts governer.py and the client should start listening to the request from the orchestrator.
+
+On the orchestrator side, I used conda to manage packages. The list of requirements can be found in orchestrator_requirements.txt. You can recreate the environment by doing 
+
+```
+$conda create -n <your_env> --file orchestrator_requirements.txt
+```
+The orchestrator takes in 6 arguments
+- --app (e.g. lightgbm. Four applications are support, lightgbm, mapreduce, video_app and matrix, user can provide their own DAG form application by following the app_config.json in the profile_data section)
+- --mc (e.g. Ed_mc_vid.xlsx. This file store the profile data of the devices in the network)
+- --pf (Probability of failure threshold)
+- --rd (Maximum replication degree)
+- --jp (Joint optimization parameter)
+- --sch (Orchestration scheme, default to **IBDASH** )
 
 ## Acknowledgements
 
 [MXNET(arm64)](https://drive.google.com/file/d/1jr-kP1_zlLa9tx-GtdlBV3Nn20qRJgzY/view)
+
