@@ -1,7 +1,5 @@
 import lightgbm as lgb
-#import boto3
 import numpy as np
-#from boto3.s3.transfer import TransferConfig
 import json
 import random
 import time

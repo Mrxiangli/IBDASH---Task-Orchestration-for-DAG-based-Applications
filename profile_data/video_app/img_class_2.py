@@ -1,6 +1,5 @@
 import json
 import os
-import matplotlib.pyplot as plt
 import mxnet as mx
 from mxnet import gluon, nd
 from mxnet.gluon.model_zoo import vision
