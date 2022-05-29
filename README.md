@@ -44,10 +44,15 @@ $conda create -n <your_env> --file orchestrator_requirements.txt
 The orchestrator takes in 6 arguments
 - --app (e.g. lightgbm. Four applications are support, lightgbm, mapreduce, video_app and matrix, user can provide their own DAG form application by following the app_config.json in the profile_data section)
 - --mc (e.g. Ed_mc_vid.xlsx. This file store the profile data of the devices in the network)
-- --pf (Probability of failure threshold)
-- --rd (Maximum replication degree)
-- --jp (Joint optimization parameter)
+- --pf (Probability of failure threshold, Default to 0.25)
+- --rd (Maximum replication degree, Default to 3)
+- --jp (Joint optimization parameter, Default to 0.5)
 - --sch (Orchestration scheme, default to **IBDASH** )
+
+An sample execution command is 
+```
+python ibdash.py --app mapreduce --mc ED_mc_map.xlsx --sch ibdash
+```
 
 ## Acknowledgements
 
