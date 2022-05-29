@@ -421,7 +421,10 @@ if __name__ =='__main__':
 	except:
 		print("ERROR")
 
-	edge_list = json_file_loader("edge_list.json")
+	# edge_list = json_file_loader(os.path.join(os.getcwd(),"edge_list.json"))
+	_curFolder = os.path.dirname(os.path.abspath(__file__))
+	edge_list = json_file_loader(os.path.join(_curFolder,"edge_list.json"))
+
 	for i in range(len(edge_list.keys())):
 		socket_list.append(None)
 

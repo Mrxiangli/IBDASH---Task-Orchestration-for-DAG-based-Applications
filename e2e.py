@@ -3,6 +3,15 @@ import subprocess
 import argparse
 import configparser
 import time
+import subprocess
+import signal
+
+def handler(signum, frame):
+	global lock
+	res = input("Ctrl-c was pressed. Do you really want to exit? y/n ")
+	if res == 'y':
+		lock = False
+        
 
 if __name__ =='__main__':
 	parser = argparse.ArgumentParser()
@@ -10,9 +19,9 @@ if __name__ =='__main__':
 	parser.add_argument('--f', type=str, nargs="?")
 	parser.add_argument('--app', type=str, nargs="?")
 	args = parser.parse_args()
-
+	signal.signal(signal.SIGINT, handler)
 	instance_count = args.c
-
+	
 	result_list = []
 	for i in range(1, instance_count+1):
 		if args.app == "lightgbm":
@@ -22,7 +31,8 @@ if __name__ =='__main__':
 		if args.app == "mapreduce":
 			file = "mapreduce_result_{}.txt".format(i)	
 		result_list.append(file) 
-
+	global lock
+	lock = True
 	current_dir = os.getcwd()
 	timefile=os.path.join(current_dir,args.f)
 
@@ -47,7 +57,7 @@ if __name__ =='__main__':
 				result_list.remove(each)
 				instance = each.split('_')[-1].split('.')[0]
 				time_list.append([instance,out.decode("utf-8")])
-		if new_timer - timer_start > 300:
+		if new_timer - timer_start > 900 or lock == False:
 			break
 				
 	time_file = open(timefile,"a")
