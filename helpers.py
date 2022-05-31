@@ -663,7 +663,10 @@ def creat_input_output_regression_history(app_path,dependency_dic,input_lookup,o
 			input_file_list = input_lookup[str(task)]
 			output_file_list = output_lookup[str(task)]
 			for each_inputfile in input_file_list:
-					input_file = each_inputfile[0]
+					if each_inputfile[1] == 1:
+						input_file = each_inputfile[0]
+					else:
+						input_file = each_inputfile[0]+each_inputfile[2]
 					if input_file not in inout[task]["input"].keys():
 						inout[task]["input"][input_file]=[]	
 			for each_outputfile in output_file_list:

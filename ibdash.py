@@ -774,7 +774,7 @@ def run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 			load_ed_rd[i] = np.add(load_ed_rd[i],ED_tasks[j][i])
 	return time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av, load_ed_rd
 
-def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list, ed_cpu_regression,ed_latency_regression):
+def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list, ed_cpu_regression,ed_latency_regression,output_lookup):
 	# ########## LATs ############
 
 	model_info=dict()
@@ -797,7 +797,9 @@ def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depend
 		time = round(time,2)
 		if time not in task_time:
 			k+=1					# use k to track the unit time 
+			timer.sleep(1)
 		else:
+			timer.sleep(1)
 			i=0
 			start_time = timer.time()
 			lats_pf = 1
@@ -898,8 +900,9 @@ def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depend
 			schedule_time_lats = end_time - start_time
 			#print("==========application instance at time {} is done with scheduling=======".format(time))
 			get_times_stamp(instance_count)
-			#dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
-			service_time_lats.append(i/1000)
+			print(f"allocation for instance {instance_count}: {allocation}")
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			service_time_lats.append(i)
 			#print(service_time_lats)
 			k=k+1
 			pf_lats_av.append(tmp_pf_dic[task_types-1])
@@ -910,7 +913,7 @@ def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depend
 	for each in range(0,sim_time):
 		if each in task_time:
 			service_time_x_lats.append(service_time_lats.pop(0))
-			time_x_lats.append(each/1000)
+			time_x_lats.append(each)
 			
 	for i in range(num_edge):
 		for j in range(task_types):
@@ -1030,9 +1033,9 @@ if __name__ =='__main__':
 
 	#building the cpu regression model and latency regression model for all edge devices
 	#===================== This piece of code is used for LaTS simulation, not necessary in the upcoming version
-
-	#ed_cpu_regression = cpu_regression_setup(task_types,num_edge_max,app_path)
-	#ed_latency_regression = latency_regression_setup(task_types,num_edge_max,EDmc_file)
+	if args.sch == "lats":
+		ed_cpu_regression = cpu_regression_setup(task_types,num_edge_max,app_path)
+		ed_latency_regression = latency_regression_setup(task_types,num_edge_max,EDmc_file)
 
 	
 	pf_petrel_av=[]
@@ -1095,7 +1098,7 @@ if __name__ =='__main__':
 		if args.sch == "rd":
 			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lats":
-			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list, ed_cpu_regression,ed_latency_regression)
+			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list, ed_cpu_regression,ed_latency_regression,output_lookup)
 
 		#print(f"service time ibdash: {average_service_time_ibdash}")
 		#print(f"service time petrel: {average_service_time_petrel}")

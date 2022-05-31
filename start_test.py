@@ -39,6 +39,7 @@ for each in server_list1:
 print(ssh_list_1)
 
 for each in ssh_list_1:
+    each.exec_command("source ~/.bashrc")
     each.exec_command("python3.7 /home/xiang/ibdash/governer.py")
 
 for each in server_list2:
@@ -56,6 +57,7 @@ for each in ssh_list_2:
    # print('Run bashrc')
     #result=each.exec_command("source ~/.bashrc")
     #each.exec_command("touch /home/johnny/step1")
+    each.exec_command("source ~/.bashrc")
     each.exec_command("python3.7 /home/johnny/ibdash/governer.py")
 
 

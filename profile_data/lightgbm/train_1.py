@@ -1,3 +1,5 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import lightgbm as lgb
 import numpy as np
 import json
@@ -50,7 +52,7 @@ if __name__ =='__main__':
 	for i in range(len(y_pred)):
 		result = np.where(y_pred[i] == np.amax(y_pred[i]))[0]
 		if result == y_train[i]:
-		   count_match = count_match +1
+			count_match = count_match +1
 	acc = count_match/len(y_pred)
 	model_name="lightGBM_model_1_{}.txt".format(args.count)
 	gbm.save_model(model_name)

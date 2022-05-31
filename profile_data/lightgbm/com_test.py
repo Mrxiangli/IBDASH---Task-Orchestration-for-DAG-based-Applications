@@ -1,3 +1,5 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import lightgbm as lgb
 #import boto3
 import numpy as np
