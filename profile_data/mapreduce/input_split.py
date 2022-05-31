@@ -36,5 +36,6 @@ if __name__ =='__main__':
     file='covid_19_data.csv'
     start=timer.time()
     split(file, args.count)
+    #split(file, 0)
     end=timer.time()
     print("input_split: "+str((end-start)))

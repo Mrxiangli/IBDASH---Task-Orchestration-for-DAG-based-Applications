@@ -37,7 +37,9 @@ if __name__ =='__main__':
 	file2=f'split_output_2_{args.count}.json'
 	file3=f'split_output_3_{args.count}.json'
 	file4=f'split_output_4_{args.count}.json'
+
 	start=timer.time()
 	reducing(file1,file2,file3,file4, args.count)
+
 	end=timer.time()
 	print("reduce2: "+str((end-start)))

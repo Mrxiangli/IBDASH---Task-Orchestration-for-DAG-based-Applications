@@ -21,13 +21,15 @@ def combine(file1,file2,count):
 
 if __name__ =='__main__':
 
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--count', type=int, help='instance_count')
-	args = parser.parse_args()
+    # real case
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--count', type=int, help='instance_count')
+    args = parser.parse_args()
 
-	file1=f'mainland_result_{args.count}.json'
-	file2=f'us_result_{args.count}.json'
-	start=timer.time()
-	combine(file1,file2, args.count)
-	end=timer.time()
-	print("combine: "+str((end-start)))
+    file1=f'mainland_result_{args.count}.json'
+    file2=f'us_result_{args.count}.json'
+    start=timer.time()
+    combine(file1,file2, args.count)
+    #combine(file1,file2, 0)
+    end=timer.time()
+    print("combine: "+str((end-start)))
