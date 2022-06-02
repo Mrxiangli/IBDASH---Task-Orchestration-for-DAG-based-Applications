@@ -580,7 +580,8 @@ def network_test():
 	p2p_test={}
 	for idx,ip_address in enumerate(global_var.device_list):
 		result = ping(ip_address,count=5,payload_size=1024,interval=0.05,privileged=False)
-		p2p_test[idx]=round(((1024/(result.avg_rtt/2))*1000)/1000000,2)
+		if result.avg_rtt != 0:
+			p2p_test[idx]=round(((1024/(result.avg_rtt/2))*1000)/1000000,2)
 	return p2p_test
 	# the last device in the deive list is orchestrator
 

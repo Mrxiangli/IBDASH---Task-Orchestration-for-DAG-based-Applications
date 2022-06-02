@@ -28,7 +28,9 @@ def split_by_seconds(filename, split_length, instance_count, vcodec="copy", acod
 		if split_length and split_length <= 0:
 				print("Split length can't be 0")
 				raise SystemExit
-		#idx=rd.randint(1,10000)
+		#for profile		
+		#instance_count=rd.randint(1,10000)
+		
 		if not video_length:
 				video_length = get_video_length(filename)
 		split_count = ceildiv(video_length, split_length)

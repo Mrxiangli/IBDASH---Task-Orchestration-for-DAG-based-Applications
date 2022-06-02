@@ -27,12 +27,12 @@ if __name__ =='__main__':
 		# print("starting test")
 
 
-		p=subprocess.Popen(["python ibdash.py --app video_app --mc ED_mc_vid.xlsx --sch rd"], shell=True,stdin=None, stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
+		p=subprocess.Popen(["python ibdash.py --app lightgbm --mc ED_mc_lightgbm.xlsx --sch ibdash"], shell=True,stdin=None, stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 		print("starting orchestrator")
 		# out,err = p.communicate()
 		# print(err)
 		# print(out)
-		p=subprocess.Popen(["python e2e.py --app video --c 100 --f time.txt"], shell=True,stdin=None, stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
+		p=subprocess.Popen(["python e2e.py --app lightgbm --c 100 --f time.txt"], shell=True,stdin=None, stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 		out,err = p.communicate()
 		time.sleep(5)
 		print("starting timer")

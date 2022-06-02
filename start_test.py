@@ -40,7 +40,8 @@ print(ssh_list_1)
 
 for each in ssh_list_1:
     each.exec_command("source ~/.bashrc")
-    each.exec_command("python3.7 /home/xiang/ibdash/governer.py")
+    time.sleep(2)
+    each.exec_command("python /home/xiang/ibdash/governer.py")
 
 for each in server_list2:
     scp,ssh = createSSHClient(each[0],each[1])
@@ -58,7 +59,8 @@ for each in ssh_list_2:
     #result=each.exec_command("source ~/.bashrc")
     #each.exec_command("touch /home/johnny/step1")
     each.exec_command("source ~/.bashrc")
-    each.exec_command("python3.7 /home/johnny/ibdash/governer.py")
+    time.sleep(2)
+    each.exec_command("python /home/johnny/ibdash/governer.py")
 
 
 
