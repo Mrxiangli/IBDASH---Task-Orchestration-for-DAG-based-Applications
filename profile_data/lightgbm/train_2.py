@@ -19,6 +19,7 @@ if __name__ =='__main__':
 	start=timer.time()*1000
 	path_parent = os.getcwd()
 	file = "Digits_Train_Transform_{}.txt".format(args.count)
+	#file = "Digits_Train_Transform_0.txt"
 	train_data = np.genfromtxt(os.path.join(path_parent,file),delimiter="\t")
 	y_train = train_data[:,0]
 	X_train = train_data[:,1:train_data.shape[1]]
@@ -54,9 +55,10 @@ if __name__ =='__main__':
 	for i in range(len(y_pred)):
 		result = np.where(y_pred[i] == np.amax(y_pred[i]))[0]
 		if result == y_train[i]:
-		   count_match = count_match +1
+			count_match = count_match +1
 	acc = count_match/len(y_pred)
 	model_name="lightGBM_model_2_{}.txt".format(args.count)
+	#model_name="lightGBM_model_2_{}.txt".format(random.randint(1,10000))
 	gbm.save_model(model_name)
 	end=timer.time()*1000
 	print("train2: "+str((end-start)//1000))

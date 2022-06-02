@@ -4,14 +4,15 @@ import numpy as np
 import resource
 import xlsxwriter
 
-workbook = xlsxwriter.Workbook('cpu_lat.xlsx')
+workbook = xlsxwriter.Workbook('cpu_lat_mat.xlsx')
 usage_lat = workbook.add_worksheet("lat_us")
 row = 0
 
 
 cmd = ""
 cpu_limit=[100, 80, 50, 30 ,10, 5]
-prof_tk = prof_tk = ["input_split.py", "map1.py", "map2.py", "map3.py","map4.py","reduce1.py","reduce2.py","combine.py"]
+#cpu_limit=[100]
+prof_tk = prof_tk = ["tk0.py", "tk1.py", "tk2.py", "tk3.py","tk4.py"]
 mc_dic={}
 for profile_file in prof_tk:
 	time_plot = []

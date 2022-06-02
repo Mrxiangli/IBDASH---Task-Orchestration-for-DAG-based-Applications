@@ -5,6 +5,7 @@ import os
 import time as timer
 import argparse
 import configparser
+import random as rd
 
 SAVING_FRAMES_PER_SECOND = 1
 
@@ -86,5 +87,7 @@ if __name__ == "__main__":
 	start=timer.time()
 	filename=f"test_3_of_3_{args.count}.mp4"
 	main(filename,args.count)
+	# filename=f"test_3_of_3_0.mp4"
+	# main(filename,rd.randint(1,10000))
 	end=timer.time()
 	print("extract_frame_3: "+str((end-start)))

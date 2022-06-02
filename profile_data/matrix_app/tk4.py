@@ -2,34 +2,24 @@ import cv2
 from matplotlib import pyplot as plt
 import time as timer
 from numpy.linalg import inv
+import argparse
 import numpy as np
+import random as rd
 
-img = cv2.imread("testing_pic/panda.jpeg") 
-img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+if __name__ =='__main__':
 
-start=timer.time()
-# This is a really bad trained set, I don't think it works at all...lol
-panda_data = cv2.CascadeClassifier('testing_pic/panda.xml')
+	# parser = argparse.ArgumentParser()
+	# parser.add_argument('--count', type=int, help='instance_count')
+	# args = parser.parse_args()
 
-found = panda_data.detectMultiScale(img_gray,scaleFactor=1.3,minNeighbors=10,minSize =(100, 100))
-
-amount_found = len(found)
-
-
-if amount_found != 0:
-	  
-	# There may be more than one
-	# sign in the image
-	for (x, y, width, height) in found:
-		  
-		# We draw a green rectangle around
-		# every recognized sign
-		cv2.rectangle(img_rgb, (x, y), 
-					  (x + height, y + width), 
-					  (0, 255, 0), 5)
-for i in range(0,5):
-	a= np.random.rand(10000,10000)
-plt.subplot(1, 1, 1)
-end=timer.time()
-print("tk4: "+str((end-start)/100))
+	start=timer.time()
+	# input1=np.load(f"tk1_output_{args.count}.npy")
+	# input2=np.load(f"tk3_output_{args.count}.npy")
+	input1=np.load(f"tk1_output_0.npy")
+	input2=np.load(f"tk3_output_0.npy")
+	final = input1@input2
+	#output = f"tk4_output_{args.count}.npy"
+	output = f"tk4_output_{rd.randint(1,10000)}.npy"	
+	np.save(output, final)
+	end=timer.time()
+	print("tk4: "+str((end-start)))

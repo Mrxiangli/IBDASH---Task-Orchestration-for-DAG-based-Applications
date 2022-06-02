@@ -7,6 +7,7 @@ import numpy as np
 import time as timer
 import argparse
 import configparser
+import random as rd
 
 def predict(model, image, categories, k, file_handle):
 	predictions = model(transform(image)).softmax()
@@ -51,6 +52,10 @@ if __name__ =='__main__':
 	for i in range(1,3):
 		file_name=f"test_3_of_3_frame_{i}_{args.count}.jpg"
 		result_file=f"test_3_of_3_frame_{i}_result_{args.count}.txt"
+
+		# file_name=f"test_3_of_3_frame_{i}_0.jpg"
+		# result_file=f"test_3_of_3_frame_{i}_result_{rd.randint(1,10000)}.txt"
+
 		f_handle=open(result_file,"w")
 		#f_handle=None
 		file_path=os.path.join(path_parent,file_name) 

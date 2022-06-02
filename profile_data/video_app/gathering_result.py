@@ -7,6 +7,7 @@ import numpy as np
 import time as timer
 import argparse
 import configparser
+import random as rd
 
 if __name__ =='__main__':
 	
@@ -33,6 +34,22 @@ if __name__ =='__main__':
 								break
 	file=f"analytic_result_{args.count}.txt"
 	f=open(file,"w")
+	# while True: 
+	# 	if os.path.exists(f"test_1_of_3_frame_1_result_0.txt"):
+	# 		if os.path.exists(f"test_1_of_3_frame_2_result_0.txt"):
+	# 			if os.path.exists(f"test_2_of_3_frame_1_result_0.txt"):
+	# 				if os.path.exists(f"test_2_of_3_frame_2_result_0.txt"):
+	# 					if os.path.exists(f"test_3_of_3_frame_1_result_0.txt"):
+	# 						if os.path.exists(f"test_3_of_3_frame_2_result_0.txt"):
+	# 							temp_handle.append(open(f"test_1_of_3_frame_1_result_0.txt","r"))
+	# 							temp_handle.append(open(f"test_1_of_3_frame_2_result_0.txt","r"))
+	# 							temp_handle.append(open(f"test_2_of_3_frame_1_result_0.txt","r"))
+	# 							temp_handle.append(open(f"test_2_of_3_frame_2_result_0.txt","r"))
+	# 							temp_handle.append(open(f"test_3_of_3_frame_1_result_0.txt","r"))
+	# 							temp_handle.append(open(f"test_3_of_3_frame_2_result_0.txt","r"))
+	# 							break
+	# file=f"analytic_result_{rd.randint(1,10000)}.txt"
+	# f=open(file,"w")
 
 	for each in temp_handle:
 		f.write(each.read())

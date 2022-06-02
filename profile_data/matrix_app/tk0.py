@@ -1,14 +1,18 @@
-import cv2 
 import numpy as np
 import time as timer
-from numpy.linalg import inv
+import argparse
+import random as rd
 
-start=timer.time()
-image = cv2.imread("testing_pic/panda.jpeg") 
-image = cv2.cvtColor(src=image, code=cv2.COLOR_BGR2GRAY)
+if __name__ =='__main__':
 
-for i in range(0,100):
-	a= np.random.rand(1000,1000)
-	a_inv = inv(a)
-end=timer.time()
-print("tk0: "+str((end-start)/100))
+	# parser = argparse.ArgumentParser()
+	# parser.add_argument('--count', type=int, help='instance_count')
+	# args = parser.parse_args()
+
+	start=timer.time()
+	a= np.random.rand(2000,2000)
+	#vector_file=f"tk0_output_{args.count}"
+	vector_file=f"tk0_output_{rd.randint(1,10000)}"
+	np.save(vector_file, a)
+	end=timer.time()
+	print("tk0: "+str((end-start)))

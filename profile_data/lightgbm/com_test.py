@@ -1,7 +1,6 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import lightgbm as lgb
-#import boto3
 import numpy as np
 import time
 import sys
@@ -10,6 +9,7 @@ import time as timer
 import argparse
 import configparser
 from numpy import savetxt
+import random as rd
 
 if __name__ =='__main__':
 	parser = argparse.ArgumentParser()
@@ -19,10 +19,11 @@ if __name__ =='__main__':
 
 	start=timer.time()*1000
 
-	num_models = 1
+	num_models = 2
 
 	path_parent = os.getcwd()
 	file_vector = "vectors_pca_"+str(args.count)+".npy"
+	#file_vector = "vectors_pca_0.npy"
 	file_test = "Digits_Test.txt"
 
 	vectors = np.load(os.path.join(path_parent,file_vector))
@@ -44,6 +45,7 @@ if __name__ =='__main__':
 
 	for i in range(1,num_models+1):
 		filename = f"lightGBM_model_{i}_{args.count}.txt"
+		#filename = f"lightGBM_model_{i}_0.txt"
 
 		gbm = lgb.Booster(model_file=os.path.join(path_parent,filename))
 		y_pred = gbm.predict(X_test, num_iteration=gbm.best_iteration)
@@ -57,10 +59,10 @@ if __name__ =='__main__':
 
 	for i in range(len(y_test)):
 		if means[i] == y_test[i]:
-		   count_match = count_match +1
+			count_match = count_match +1
 	acc = count_match/len(y_pred)
 	result_file = "predict_" + str(args.count)+".txt"
+#	result_file = "predict_" + str(rd.randint(1,10000))+".txt"
 	savetxt(result_file, y_pred, delimiter="\t")
-#	print("accuracy: {}".format(acc))
 	end=timer.time()*1000
-	print("com_test "+str((end-start)//1000))
+	print("com_test: "+str((end-start)//1000))

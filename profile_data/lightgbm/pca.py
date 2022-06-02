@@ -8,7 +8,7 @@ from numpy import savetxt
 import numpy as np
 
 import json
-import random
+import random as rd
 import time
 import io
 import time as timer
@@ -45,6 +45,7 @@ if __name__ =='__main__':
 	PA = vectors.T.dot(CA.T)
 
 	vector_file = "vectors_pca_"+str(args.count)
+	#vector_file = "vectors_pca_"+str(rd.randint(1,10000))
 	np.save(vector_file, vectors)
 
 	first_n_A = PA.T[:,0:10].real
@@ -53,6 +54,7 @@ if __name__ =='__main__':
 	first_n_A_label = concatenate((train_labels, first_n_A), axis=1)
 
 	filename = "Digits_Train_Transform_"+str(args.count)+".txt"
+	#filename = "Digits_Train_Transform_"+str(rd.randint(1,10000))+".txt"
 
 	savetxt(filename, first_n_A_label, delimiter="\t")
 	end=timer.time()*1000
