@@ -27,7 +27,7 @@ if __name__ =='__main__':
 		# print("starting test")
 
 
-		p=subprocess.Popen(["python ibdash.py --app lightgbm --mc ED_mc_lightgbm.xlsx --sch lavea"], shell=True,stdin=None, stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
+		p=subprocess.Popen(["python ibdash.py --app lightgbm --mc ED_mc_lightgbm.xlsx --sch rr"], shell=True,stdin=None, stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 		print("starting orchestrator")
 		# out,err = p.communicate()
 		# print(err)
