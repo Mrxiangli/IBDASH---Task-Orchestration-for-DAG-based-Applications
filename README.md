@@ -22,6 +22,7 @@ $sudo apt-get install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlit
 Then, download python 3.7.2 and install it.
 ```
 $sudo wget https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz
+$tar xzvf Python-3.7.2.tgz
 $sudo ./configure
 $sudo make altinstall
 ```
