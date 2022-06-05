@@ -12,6 +12,7 @@ import argparse
 import configparser
 import time as timer
 
+
 if __name__ =='__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--count', type=int, help='instance_count')
@@ -61,4 +62,5 @@ if __name__ =='__main__':
 	#model_name="lightGBM_model_2_{}.txt".format(random.randint(1,10000))
 	gbm.save_model(model_name)
 	end=timer.time()*1000
-	print("train2: "+str((end-start)//1000))
+	#os.remove(model_name)
+	print("train_2: "+str((end-start)//1000))

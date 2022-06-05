@@ -28,6 +28,11 @@ if __name__ =='__main__':
 
     file1=f'mainland_result_{args.count}.json'
     file2=f'us_result_{args.count}.json'
+
+
+    # file1=f'mainland_result_0.json'
+    # file2=f'us_result_0.json'
+
     start=timer.time()
     combine(file1,file2, args.count)
     #combine(file1,file2, 0)

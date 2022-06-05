@@ -31,9 +31,11 @@ if __name__ =='__main__':
     args = parser.parse_args()
 
     file=f'split_input_2_{args.count}.csv'
+    #file=f'split_input_2_0.csv'
 
     start=timer.time()
     mapping(file, args.count)
+    #mapping(file, 0)
 
     end=timer.time()
     print("map2: "+str((end-start)))

@@ -62,7 +62,8 @@ if __name__ =='__main__':
 			count_match = count_match +1
 	acc = count_match/len(y_pred)
 	result_file = "predict_" + str(args.count)+".txt"
-#	result_file = "predict_" + str(rd.randint(1,10000))+".txt"
+	#result_file = "predict_" + str(rd.randint(1,10000))+".txt"
 	savetxt(result_file, y_pred, delimiter="\t")
 	end=timer.time()*1000
+	#os.remove(result_file)
 	print("com_test: "+str((end-start)//1000))

@@ -3,6 +3,7 @@ import time as timer
 import argparse
 import configparser
 import random as rd
+import os
 
 def split(file, count):
 
@@ -12,6 +13,7 @@ def split(file, count):
     data_frame_2=(result[interval:2*interval])
     data_frame_3=(result[interval*2:3*interval])
     data_frame_4=(result[interval*3:len(result)])
+   
     #real case
     data_frame_1.to_csv(f"split_input_1_{count}.csv")
     data_frame_2.to_csv(f"split_input_2_{count}.csv")
@@ -20,10 +22,20 @@ def split(file, count):
 
     #for profiling
     # rand = rd.randint(1,10000)
-    # data_frame_1.to_csv(f"split_input_1_{rand}.csv")
-    # data_frame_2.to_csv(f"split_input_2_{rand}.csv")
-    # data_frame_3.to_csv(f"split_input _3_{rand}.csv")
-    # data_frame_4.to_csv(f"split_input_4_{rand}.csv")
+    # f1=f"split_input_1_{rand}.csv"
+    # f2=f"split_input_2_{rand}.csv"
+    # f3=f"split_input_3_{rand}.csv"
+    # f4=f"split_input_4_{rand}.csv"
+    # data_frame_1.to_csv(f1)
+    # data_frame_2.to_csv(f2)
+    # data_frame_3.to_csv(f3)
+    # data_frame_4.to_csv(f4)
+
+    # os.remove(f1)
+    # os.remove(f2)
+    # os.remove(f3)
+    # os.remove(f4)
+
 
 
 

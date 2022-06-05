@@ -59,4 +59,6 @@ if __name__ =='__main__':
 	#model_name="lightGBM_model_1_{}.txt".format(random.randint(1,10000))
 	gbm.save_model(model_name)
 	end=timer.time()*1000
-	print("train1: "+str((end-start)//1000))
+	# profiling
+	#os.remove(model_name)
+	print("train_1: "+str((end-start)//1000))

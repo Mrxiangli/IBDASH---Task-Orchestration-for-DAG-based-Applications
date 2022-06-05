@@ -4,9 +4,9 @@ import numpy as np
 import resource
 import xlsxwriter
 
-workbook = xlsxwriter.Workbook('t2.xlsx')
-edm = workbook.add_worksheet("ED_m")
-edc = workbook.add_worksheet("ED_c")
+workbook = xlsxwriter.Workbook('ed_mc_light.xlsx')
+edm = workbook.add_worksheet("edm")
+edc = workbook.add_worksheet("edc")
 scale = 1
 row = 0
 col = 0
@@ -14,9 +14,11 @@ col = 0
 cmd = ""
 back_pro=[0,1,2,3,4,5,6,7,8]
 x_ax = [0,1,2,3,4,5,6,7,8]
+#back_pro=[0,1]
+#x_ax = [0,1]
 prof_num=1
-prof_tk = ["input_split.py --count 0", "map1.py --count 0",  "map2.py --count 0",  "map3.py --count 0","map4.py --count 0", "reduce1.py --count 0", "reduce2.py --count 0", "combine.py --count 0"]
-base_tk_list = ["input_split.py --count 0 &", "map1.py --count 0 &",  "map2.py --count 0 &",  "map3.py --count 0 &","map4.py --count 0 &", "reduce1.py --count 0 &", "reduce2.py --count 0 &", "combine.py --count 0 &"]
+prof_tk = ["pca.py","train_1.py","train_2.py","com_test.py"]
+base_tk_list = ["pca.py  &","train_1.py &","train_2.py &","com_test.py &"]
 for base_tk in base_tk_list:
 	mc_dic={}
 	for profile_file in prof_tk:

@@ -1,0 +1,24 @@
+medicine chest, medicine cabinet: 18.80% 
+beaker: 12.41% 
+television, television system: 6.12% 
+
+desk: 13.93% 
+desktop computer: 13.51% 
+screen, CRT screen: 11.03% 
+
+laptop, laptop computer: 26.90% 
+desktop computer: 18.16% 
+monitor: 18.16% 
+
+toilet seat: 32.70% 
+medicine chest, medicine cabinet: 27.01% 
+toilet tissue, toilet paper, bathroom tissue: 18.76% 
+
+toilet seat: 32.70% 
+medicine chest, medicine cabinet: 27.01% 
+toilet tissue, toilet paper, bathroom tissue: 18.76% 
+
+toilet seat: 44.03% 
+toilet tissue, toilet paper, bathroom tissue: 18.74% 
+medicine chest, medicine cabinet: 5.68% 
+

@@ -4,7 +4,7 @@ import numpy as np
 import resource
 import xlsxwriter
 
-workbook = xlsxwriter.Workbook('cpu_lat_mat.xlsx')
+workbook = xlsxwriter.Workbook('cpu_lat_light.xlsx')
 usage_lat = workbook.add_worksheet("lat_us")
 row = 0
 
@@ -12,7 +12,7 @@ row = 0
 cmd = ""
 cpu_limit=[100, 80, 50, 30 ,10, 5]
 #cpu_limit=[100]
-prof_tk = prof_tk = ["tk0.py", "tk1.py", "tk2.py", "tk3.py","tk4.py"]
+prof_tk = prof_tk = ["pca.py","train_1.py","train_2.py","com_test.py"]
 mc_dic={}
 for profile_file in prof_tk:
 	time_plot = []

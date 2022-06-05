@@ -1,3 +1,3 @@
-refrigerator, icebox: 21.79% 
-wardrobe, closet, press: 21.26% 
-sliding door: 11.78% 
+toilet seat: 44.03% 
+toilet tissue, toilet paper, bathroom tissue: 18.74% 
+medicine chest, medicine cabinet: 5.68% 

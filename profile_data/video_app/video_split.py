@@ -57,10 +57,10 @@ def split_by_seconds(filename, split_length, instance_count, vcodec="copy", acod
 				#print("About to run: " + " ".join(split_cmd + split_args))
 				subprocess.check_output(split_cmd + split_args)
 		#remove this after profiling
-		#rm_path=os.getcwd()
-		#os.remove(os.path.join(rm_path,f"test_1_of_3_0{idx}.mp4"))
-		#os.remove(os.path.join(rm_path,f"test_2_of_3_0{idx}.mp4"))
-		#os.remove(os.path.join(rm_path,f"test_3_of_3_0{idx}.mp4"))
+		# rm_path=os.getcwd()
+		# os.remove(os.path.join(rm_path,f"test_1_of_3_{instance_count}.mp4"))
+		# os.remove(os.path.join(rm_path,f"test_2_of_3_{instance_count}.mp4"))
+		# os.remove(os.path.join(rm_path,f"test_3_of_3_{instance_count}.mp4"))
 
 
 def main():

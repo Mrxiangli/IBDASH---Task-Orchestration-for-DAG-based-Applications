@@ -6,6 +6,7 @@ from numpy import genfromtxt
 from numpy import concatenate
 from numpy import savetxt
 import numpy as np
+import os
 
 import json
 import random as rd
@@ -58,4 +59,6 @@ if __name__ =='__main__':
 
 	savetxt(filename, first_n_A_label, delimiter="\t")
 	end=timer.time()*1000
+	# profiling
+	#os.remove(filename)
 	print("pca: "+str((end-start)//1000))
