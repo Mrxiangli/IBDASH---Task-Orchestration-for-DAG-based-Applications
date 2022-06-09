@@ -12,7 +12,6 @@ import argparse
 import configparser
 import time as timer
 
-
 if __name__ =='__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--count', type=int, help='instance_count')

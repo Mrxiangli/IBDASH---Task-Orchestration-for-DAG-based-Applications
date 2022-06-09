@@ -1,1 +1,1 @@
-{"s": "NULL", "0": "pca.py", "1": "train_1.py", "2": "train_2.py", "3": "com_test.py", "end": "None"}
+{"s": "NULL", "0": "input_split.py", "1": "map1.py", "2": "map2.py", "3": "map3.py", "4": "map4.py", "5": "reduce1.py", "6": "reduce2.py", "7": "combine.py", "end": "None"}

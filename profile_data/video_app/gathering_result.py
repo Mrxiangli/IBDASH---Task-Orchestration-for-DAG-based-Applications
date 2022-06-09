@@ -34,7 +34,6 @@ if __name__ =='__main__':
 								break
 	file=f"analytic_result_{args.count}.txt"
 	f=open(file,"w")
-
 	# while True: 
 	# 	if os.path.exists(f"test_1_of_3_frame_1_result_0.txt"):
 	# 		if os.path.exists(f"test_1_of_3_frame_2_result_0.txt"):

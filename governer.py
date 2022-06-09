@@ -42,16 +42,16 @@ def next_task(current_tk,depend_lookup,input_lookup):
 
 # Network test function: send a ping to all devices in the device list and retrieve their 
 # communication speed and send the updat eback to orchestrator
-def network_speed_test(device_list):
-	p2p_test=network_test(device_list)
+def network_speed_test(device_list, trans_err_prov):
+	p2p_test=network_test(device_list, trans_err_prov)
 	send_ntwk_test(socket_list[-1],p2p_test,IDENTIFIER)
 
-def network_test(device_list):
+def network_test(device_list, trans_err_prov):
 	p2p_test={}
 	for idx,ip_address in enumerate(device_list):
 		result = ping(ip_address,count=5,payload_size=1024,interval=0.05,privileged=False)
 		print(f"avg_rtt:{result.avg_rtt}")
-		p2p_test[idx]=round(((1024/(result.avg_rtt/2))*1000)/1000000,2)
+		p2p_test[idx]=round(((1024/(((result.avg_rtt)*trans_err_prov)/2))*1000)/1000000,5)
 	return p2p_test
 
 def send_ntwk_test(s,p2p_test,identifier):
@@ -114,34 +114,30 @@ def receive_request(size,client_socket):
 
 def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 	received_size = 0
-	bytes_read = b''
+	#bytes_read = b''
+	bytes_read = receive_request(filesize,client_socket)
 	with open(filename, "wb") as f:
-		counter = 0
-		while (filesize - received_size) > BUFFER_SIZE:
-			bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
-			bytes_read+=bytes_read_chunk				
-			received_size += len(bytes_read_chunk)
-			counter+=1
-		residue = filesize - received_size
-
-		while residue > 0:
-			bytes_read_chunk = client_socket.recv(residue)
-			bytes_read += bytes_read_chunk
-			received_size += len(bytes_read_chunk)
-			if len(bytes_read) - residue == 0:
-				break
-			else:
-				residue -= len(bytes_read_chunk)
 
 		f.write(bytes_read)
 
 		print(f"{filename} is received")
-		if received_size == filesize:
-			bytes_read = client_socket.recv(4)
+		if len(bytes_read) == filesize:
+		#if received_size == filesize:
+			bytes_read = receive_request(4,client_socket)
+			print(bytes_read.decode() + "!")
+			print(bytes_read)
+			#print(len(bytes_read.decode()))
 			if bytes_read.decode() != "/EOF":
-				print(f" error transmitting {filename}, exiting")
-				client_socket.close()
-				return -1
+				print(f"filesize={filesize}")
+				if "\n" in bytes_read.decode():
+					bytes_read = receive_request(1,client_socket)
+					if bytes_read.decode() == "F":
+						pass
+					else:
+						print(f" error transmitting {filename}, exiting")
+						print(client_socket.recv(10).decode())
+						client_socket.close()
+						return -1
 
 # Utility functon for sending command
 def send_command(s,msg):
@@ -166,10 +162,11 @@ def send_resend_request(s,identifier,file):
 
 # Utility function that set up the p2p connection
 def socket_connections(host,port):
-	s = socket.socket()
+	s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 	print(f"[+] Connecting to {host}:{port}")
 	s.connect((host, port))
 	s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	print("[+] Connected.")
 	return s
 
@@ -181,8 +178,9 @@ def connection_creation_thread(connection_queue, socket_q):
 	SEPARATOR = "<SEPARATOR>"
 	# create the server socket
 	# TCP socket
-	s = socket.socket()
+	s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 	s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	print("binding now")
 	# bind the socket to our local address
 	s.bind((SERVER_HOST, SERVER_PORT))
@@ -249,7 +247,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 
 			# receiving network test request
 			elif msg_type == "P":
-				Process(target=network_speed_test, args=(device_list,)).start()
+				trans_err_prov= int(receive_request(10,client_socket).decode().strip())
+				Process(target=network_speed_test, args=(device_list,trans_err_prov,)).start()
 				
 			# receiving file request 
 			elif msg_type == "R":
@@ -365,6 +364,8 @@ def processing_thread(command,socket_list):
 	if err:
 		print(f"task {command} did not finish execution, exiting! \n Error: {err}")
 		sys.exit()
+	if out:
+		print(f"task {command} has the following output {out}")
 
 	# send the output from this task to the edge devices that will execute the depedent tasks
 	print("=============================================== sending corresponding tasks")

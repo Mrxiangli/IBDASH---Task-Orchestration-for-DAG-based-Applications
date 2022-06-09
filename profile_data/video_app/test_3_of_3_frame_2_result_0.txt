@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 toilet seat: 44.03% 
 toilet tissue, toilet paper, bathroom tissue: 18.74% 
 medicine chest, medicine cabinet: 5.68% 
+=======
+refrigerator, icebox: 21.79% 
+wardrobe, closet, press: 21.26% 
+sliding door: 11.78% 
+>>>>>>> 75bd5f89560bdf171f5c2aeb9a960f1a96d4be04

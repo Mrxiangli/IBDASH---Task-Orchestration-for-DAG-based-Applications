@@ -32,7 +32,7 @@ import global_var
 
 pp = pprint.PrettyPrinter(indent=4)
 
-def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup,in_out_history,input_lookup):
+def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup,in_out_history,input_lookup,transmission_err_prov):
 	######### IBOT-PI ######### 
 	print(in_out_history)
 	pf_ibdash_av=[]
@@ -154,7 +154,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 													# using the previous file size: this can be changed accordingly later
 													filesize = global_var.in_out_history[int(each_task)]['input'][each_input_file][-1]
 													# print(f" filename: {filename}, size :{filesize}")
-													tmp_trans_time = math.ceil(filesize/transfer_speed)
+													tmp_trans_time = math.ceil((filesize/transfer_speed) * transmission_err_prov)
 													if tmp_trans_time > data_trans_t:
 														data_trans_t = tmp_trans_time
 												else:
@@ -270,7 +270,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				#pass
 			dispatcher_dic[instance_count]=allocation
 
-			#allocation={'0': [0], '1': [1], '2': [0], '3': [1], '4': [0], '5': [1], '6': [0], '7': [1]}
+			#allocation={'0': [1], '1': [4], '2': [4], '3': [2], "4":[2], "5":[3], "6":[3], "7":[3]}
 			print(f"Task allocation for instance {instance_count} : {allocation}")
 			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
@@ -975,7 +975,8 @@ if __name__ =='__main__':
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 5					#number of edge devices in DAG
+	num_edge_max = 8					#number of edge devices in DAG
+	transmission_err_prov = 3
 
 	access_dict={}
 	access_dict[0]="128.46.74.171" #nx1
@@ -983,12 +984,16 @@ if __name__ =='__main__':
 	access_dict[2]="128.46.74.173" #nx3
 	access_dict[3]="128.46.74.95"  #agx
 	access_dict[4]="128.46.32.175" #ashraf server
-	access_dict[5]="128.46.73.218" #orchestrator
+	access_dict[5]="128.46.74.198"
+	access_dict[6]="128.46.74.176"
+	access_dict[7]="128.46.74.197"
+	access_dict[8]="128.46.73.218" #orchestrator
 	
 	global_var.device_list=[]
 	global_var.socket_list = []
 	global_var.IDENTIFIER = num_edge_max
-	global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
+	if args.sch == "ibdash":
+		global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
 
 	for each in access_dict.keys():
 		global_var.device_list.append(access_dict[each])
@@ -1002,7 +1007,7 @@ if __name__ =='__main__':
 	for i in range(num_edge_max):
 		Thread(target = connection_listening_thread, args=(global_var.socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 
-
+	periodic_network_test(transmission_err_prov)
 	dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list=loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,task_file_dic,access_dict)
 
 	# send identifier to each device, every device aware the presence of other devices
@@ -1018,8 +1023,16 @@ if __name__ =='__main__':
 		send_files(global_var.socket_list[idx],input_lp)
 		send_files(global_var.socket_list[idx],output_lp)
 
-	# start the network speed test
-	periodic_network_test()
+	# do the inital network test
+	if args.sch == "ibdash":
+		ntwk_test=network_test()
+		global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
+		for idx in range(len(global_var.socket_list)):
+			send_ntwk_test(global_var.socket_list[idx],transmission_err_prov)
+
+		# start the network speed test
+		#periodic_network_test(transmission_err_prov)
+		threading.Timer(20, periodic_network_test,[transmission_err_prov]).start()
 
 	#generate the random task arrival time 
 	task_time = np.array(sorted(random.sample(range(1,app_inst_time),num_arrivals)))
@@ -1088,7 +1101,7 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 		if args.sch == "ibdash":
-			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup,global_var.in_out_history,input_lookup)
+			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup,global_var.in_out_history,input_lookup,transmission_err_prov)
 		if args.sch == "petrel":
 			time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lavea":
@@ -1099,360 +1112,3 @@ if __name__ =='__main__':
 			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lats":
 			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list, ed_cpu_regression,ed_latency_regression,output_lookup)
-
-		#print(f"service time ibdash: {average_service_time_ibdash}")
-		#print(f"service time petrel: {average_service_time_petrel}")
-		#print(f"service time lavea: {average_service_time_lavea}")
-		#print(f"service time rr: {average_service_time_rr}")
-		#print(f"service time rd: {average_service_time_rd}")
-		#print(f"service time lats: {average_service_time_lats}")
-"""
-		fig2, orch = plt.subplots(3,2,sharex=True)
-		fig2.tight_layout()
-		orch[0][0].plot(time_x,service_time_ibdash_x,"b-",markevery=10,label="service time")
-		orch[0][1].plot(time_x_petrel,service_time_x_petrel, "b-", markevery=10,label="service time")
-		orch[1][0].plot(time_x_lavea,service_time_x_lavea,"b-", markevery=10,label="service time")
-		orch[1][1].plot(time_x_rr,service_time_x_rr,"b-", markevery=10,label="service time")
-		orch[2][0].plot(time_x_rd,service_time_x_rd,"b-", markevery=10,label="service time")
-		orch[2][1].plot(time_x_lats,service_time_x_lats,"b-", markevery=10,label="service time")
-
-		orch[0][0].set_ylabel("service time (s)",fontsize=13)
-		orch[1][0].set_ylabel("service time (s)",fontsize=13)
-		orch[2][0].set_ylabel("service time (s)",fontsize=13)
-		orch[2][0].set_xlabel("Application instance arrival time (s)",fontsize=13)
-		orch[2][1].set_xlabel("Application instance arrival time (s)",fontsize=13)
-
-		orch[0][0].set_title('IBDASH')
-		orch[0][1].set_title('PETREL')
-		orch[1][0].set_title('LAVEA')
-		orch[1][1].set_title('RR')
-		orch[2][0].set_title('RD')
-		orch[2][1].set_title('LaTS')
-
-		orch[0][0].legend(loc='upper left')
-		orch[0][1].legend(loc='upper left')
-		orch[1][0].legend(loc='upper left')
-		orch[1][1].legend(loc='upper left')
-		orch[2][0].legend(loc='upper left')
-		orch[2][1].legend(loc='upper left')
-
-		fig1, axs = plt.subplots(3,2,sharex=True)
-		fig1.tight_layout()
-		axs[0][0].plot(np.arange(0,sim_time/1000,0.001),load_ed[0],'-b' ,label="ED0")	
-		axs[0][0].plot(np.arange(0,sim_time/1000,0.001),load_ed[1],'-r', label="ED1")
-		axs[0][0].plot(np.arange(0,sim_time/1000,0.001),load_ed[2],'-g', label="ED2")
-		axs[0][0].plot(np.arange(0,sim_time/1000,0.001),load_ed[3],'-c' , label="ED3")
-		axs[0][0].plot(np.arange(0,sim_time/1000,0.001),load_ed[4],'-m', label="ED4")
-		axs[0][0].plot(np.arange(0,sim_time/1000,0.001),load_ed[5],'-k', label="ED5")
-		axs[0][0].plot(np.arange(0,sim_time/1000,0.001),load_ed[6],'-y' , label="ED6")
-		axs[0][0].plot(np.arange(0,sim_time/1000,0.001),load_ed[7],'-.b', label="ED7")
-		
-		axs[0][0].legend(loc="upper right")
-		axs[0][0].set_ylabel("# tasks",fontsize=16)
-		axs[0][0].set_title("IBDASH",fontsize=14)
-
-		axs[0][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_petrel[0],'-b' ,label="ED0")
-		axs[0][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_petrel[1],'-r', label="ED1")
-		axs[0][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_petrel[2],'-g', label="ED2")
-		axs[0][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_petrel[3],'-c' , label="ED3")
-		axs[0][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_petrel[4],'-m', label="ED4")
-		axs[0][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_petrel[5],'-k', label="ED5")
-		axs[0][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_petrel[6],'-y', label="ED6")
-		axs[0][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_petrel[7],'-.b', label="ED7")
-		axs[0][1].legend(loc="upper right")
-		axs[0][1].set_ylabel("# tasks", fontsize=14)
-		axs[0][1].set_title("PETREL",fontsize=16)
-		
-		
-		axs[1][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_lavea[0],'-b' ,label="ED0")
-		axs[1][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_lavea[1],'-r', label="ED1")
-		axs[1][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_lavea[2],'-g', label="ED2")
-		axs[1][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_lavea[3],'-c' , label="ED3")
-		axs[1][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_lavea[4],'-m', label="ED4")
-		axs[1][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_lavea[5],'-k', label="ED5")
-		axs[1][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_lavea[6],'-y', label="ED5")
-		axs[1][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_lavea[7],'-.b', label="ED6")
-		axs[1][0].legend(loc="upper right")
-		axs[1][0].set_ylabel("# tasks", fontsize=14)
-		axs[1][0].set_title("LAVEA",fontsize=16)
-			
-		
-		axs[1][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_rr[0],'-b' ,label="ED0")
-		axs[1][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_rr[1],'-r', label="ED1")
-		axs[1][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_rr[2],'-g', label="ED2")
-		axs[1][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_rr[3],'-c' , label="ED3")
-		axs[1][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_rr[4],'-m', label="ED4")
-		axs[1][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_rr[5],'-k', label="ED5")
-		axs[1][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_rr[6],'-y', label="ED5")
-		axs[1][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_rr[7],'-.b', label="ED6")
-		axs[1][1].legend(loc="upper right")
-		axs[1][1].set_ylabel("# tasks",fontsize=14)
-		axs[1][1].set_title("Round Robin",fontsize=16)
-
-
-		axs[2][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_rd[0],'-b' ,label="ED0")
-		axs[2][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_rd[1],'-r', label="ED1")
-		axs[2][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_rd[2],'-g', label="ED2")
-		axs[2][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_rd[3],'-c' , label="ED3")
-		axs[2][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_rd[4],'-m', label="ED4")
-		axs[2][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_rd[5],'-k', label="ED5")
-		axs[2][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_rd[6],'-y', label="ED6")
-		axs[2][0].plot(np.arange(0,sim_time/1000,0.001),load_ed_rd[7],'-.b', label="ED7")
-		axs[2][0].set_xlabel("simulation time (sec)",fontsize=14)
-		axs[2][0].set_ylabel("# tasks", fontsize=14)
-		axs[2][0].set_title("Random",fontsize=16)
-		axs[2][0].legend(loc="upper right")
-
-		axs[2][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_lats[0],'-b' ,label="ED0")
-		axs[2][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_lats[1],'-r', label="ED1")
-		axs[2][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_lats[2],'-g', label="ED2")
-
-		axs[2][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_lats[3],'-c' , label="ED3")
-		axs[2][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_lats[4],'-m', label="ED4")
-		axs[2][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_lats[5],'-k', label="ED5")
-		axs[2][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_lats[6],'-y', label="ED6")
-		axs[2][1].plot(np.arange(0,sim_time/1000,0.001),load_ed_lats[7],'-.b', label="ED7")
-		axs[2][1].set_xlabel("simulation time (sec)",fontsize=14)
-		axs[2][1].legend(loc="upper right")
-		axs[2][1].set_ylabel("# tasks", fontsize=14)
-		axs[2][1].set_title("LaTS",fontsize=16)
-
-
-		orch_pf_ibot=orch[0][0].twinx()
-		orch_pf_petrel=orch[0][1].twinx()
-		orch_pf_lavea=orch[1][0].twinx()
-		orch_pf_rr=orch[1][1].twinx()
-		orch_pf_rd=orch[2][0].twinx()
-		orch_pf_lats=orch[2][1].twinx()
-		orch_pf_petrel.set_ylabel("probability of failure",fontsize=13)
-		orch_pf_rr.set_ylabel("probability of failure",fontsize=13)
-		orch_pf_lats.set_ylabel("probability of failure",fontsize=13)
-
-		orch_pf_ibot.plot(time_x,pf_ibdash_av, "g-", markevery=10,label="PF")
-		orch_pf_petrel.plot(time_x_petrel,pf_petrel_av, "g-", markevery=10,label="PF")
-		orch_pf_lavea.plot(time_x_lavea,pf_lavea_av, "g-", markevery=10,label="PF")
-		orch_pf_rr.plot(time_x_rr,pf_rr_av, "g-", markevery=10,label="PF")
-		orch_pf_rd.plot(time_x_rd,pf_rd_av, "g-", markevery=10,label="PF")
-		orch_pf_lats.plot(time_x_lats,pf_lats_av, "g-", markevery=10,label="PF")
-		orch_pf_ibot.legend(loc='lower right')
-		orch_pf_petrel.legend(loc='lower right')
-		orch_pf_lavea.legend(loc='lower right')
-		orch_pf_rr.legend(loc='lower right')
-		orch_pf_rd.legend(loc='lower right')
-		orch_pf_lats.legend(loc='lower right')
-
-
-		print("============================service time =========================")
-		print([average_service_time_ibdash,average_service_time_petrel,average_service_time_lavea, average_service_time_rr, average_service_time_rd, average_service_time_lats])
-		
-		plt.show()	
-
-		label=["IBDASH","PETREL","LAVEA","RR","RD","LaTS"]
-		hat = ["x","|",".","+","/","*"]
-		data = [average_service_time_ibdash,average_service_time_petrel,average_service_time_lavea,average_service_time_rr,average_service_time_rd, average_service_time_lats]
-		plt.xticks(range(len(data)),label)
-		plt.xlabel('Orchaestration scheme')
-		plt.ylabel('Average service time (sec)')
-		for i in range(len(data)):
-			plt.bar(i, data[i], hatch=hat[i]) 
-		plt.show()
-
-
-		pf_ibdash_av=sum(pf_ibdash_av)/len(task_time)
-		pf_petrel_av=sum(pf_petrel_av)/len(task_time)
-		pf_lavea_av=sum(pf_lavea_av)/len(task_time)
-		pf_rr_av=sum(pf_rr_av)/len(task_time)
-		pf_rd_av=sum(pf_rd_av)/len(task_time)
-		pf_lats_av=sum(pf_lats_av)/len(task_time)
-		print("=====================================average pf ================================")
-		print([pf_ibdash_av, pf_petrel_av, pf_lavea_av, pf_rr_av, pf_rd_av, pf_lats_av])
-
-
-		fig1, (pf,pf_tk) = plt.subplots(1,2,figsize=(10.5,5))
-		pf.plot(pf_time,pf_ed_tk[0], '-.', markevery=40, label="ED0")
-		pf.plot(pf_time,pf_ed_tk[1], '-.', markevery=40, label="ED1")
-		pf.plot(pf_time,pf_ed_tk[2], '-.', markevery=40, label="ED2")
-		pf.plot(pf_time,pf_ed_tk[3], '-.', markevery=40, label="ED3")
-		pf.plot(pf_time,pf_ed_tk[4], '-.', markevery=40, label="ED4")
-		pf.plot(pf_time,pf_ed_tk[5], '-.', markevery=40, label="ED5")
-		pf.plot(pf_time,pf_ed_tk[6], '-.', markevery=40, label="ED6")
-		pf.plot(pf_time,pf_ed_tk[7], '-.', markevery=40, label="ED7")
-		pf.legend(loc="upper left")
-		pf.set_ylabel("Probability of failure for EDs",fontsize=14)
-		pf.set_xlabel("Time passed (sec)",fontsize=14)
-		pf.set_title('a')
-
-		label=["IBDASH","PETREL","LAVEA","RR","RD","LaTs"]
-		data = [pf_ibdash_av,pf_petrel_av,pf_lavea_av,pf_rr_av,pf_rd_av,pf_lats_av]
-		plt.xticks(range(len(data)),label)
-		plt.xlabel('Orchaestration Scheme',fontsize=14)
-		plt.ylabel('Average probability of failure',fontsize=14)
-		plt.title('b')
-		for i in range(len(data)):
-			plt.bar(i, data[i], hatch=hat[i]) 
-		plt.subplots_adjust(left=0.1,bottom=0.1,right=0.91,top=0.9,hspace=0.4)
-		plt.show()
-
-		# Following data are retrieved from running the above script at different settings
-
-		label=["IBDASH","PETREL","LAVEA","RR","RD","LaTs"]
-		pf_mix=[0.17307748173921192, 0.36260435156650367, 0.3002251055481308, 0.4427271936210497, 0.3769879558146891, 0.2984016697509398]
-		pf_ped=[0.4420294950020642, 0.8998949159772368, 0.8258736251837017, 0.9579308989360253, 0.9133802614616812, 0.8461783190029275]
-		pf_ced=[0.08059456640349111, 0.15112762626958592, 0.15856629155589683, 0.19055400347090778, 0.16148370804254858, 0.12644346165911916]
-
-		x_axis = np.arange(len(label))
-		plt.bar(x_axis-0.3, pf_mix, 0.25, label="mix", hatch="*")
-		plt.bar(x_axis,     pf_ced, 0.25, label="ced", hatch="x")
-		plt.bar(x_axis+0.3, pf_ped, 0.25, label="ped", hatch="/")
-		plt.xticks(x_axis, label, fontsize=14)
-		plt.ylabel("Average PF for an application instance",fontsize=14)
-		plt.legend(fontsize=14)
-		plt.show()
-
-		label=["IBDASH","PETREL","LAVEA","RR","RD","LaTs"]
-		mix=[1.675176, 2.206585000000001, 2.4047309999999977, 3.074325999999993, 2.488698999999998, 1.0929739999999977]
-		ped=[1.9368130000000001, 2.2033390000000024, 2.4208249999999993, 3.0776799999999938, 2.472324999999999, 1.0999780000000003]
-		ced=[1.667073999999999, 2.205128000000002, 2.4282349999999995, 3.074460999999999, 2.475105999999999, 1.1587660000000002]
-		x_axis = np.arange(len(label))
-		plt.bar(x_axis-0.3, mix, 0.25, label="mix", hatch="-")
-		plt.bar(x_axis,     ced, 0.25, label="ced", hatch="x")
-		plt.bar(x_axis+0.3, ped, 0.25, label="ped", hatch="|")
-		plt.xticks(x_axis, label, fontsize=14)
-		plt.ylabel("Average service time (sec)",fontsize=14)
-		plt.legend(fontsize=14)
-		plt.show()
-
-		fig1, li = plt.subplots(1,2,figsize=(11,5))
-		dum = [0.038,    0.069, 0.091, 0.118, 0.148]
-		inv = [0.051,    0.086, 0.12,  0.168, 0.22]
-		in_dum = [0.038, 0.078, 0.11,  0.156, 0.188]
-		dum_in = [0.051, 0.07,  0.1,   0.135, 0.169]
-		real = [0.038, 0.12,0.19,0.27,0.352]
-		add=[0.038,0.147, 0.201, 0.274,0.336]
-		tk0=[96, 32.4, 47.4]
-		tk1=[0.01, 0.01, 26.7]
-		tk2=[0.01, 34.6, 0.01]
-		dum_ph =[0.0025, 0.012, 0.020, 0.028, 0.034]
-		inv_ph =[0.0028, 0.0065, 0.015, 0.024, 0.033]
-		in_dum_ph = [0.0028,0.0073, 0.0129, 0.021, 0.030]
-		dum_in_ph = [0.0034, 0.0081, 0.016,0.024, 0.032]
-		real_ph = [0.0028, 0.0155,0.029, 0.047,0.066]
-		add_ph=[0.0053,0.018, 0.035, 0.052, 0.067]
-		tk_x = [1,2,3]
-		x=[0 , 1, 2, 3, 4]
-		x_ph=[0 , 1, 2, 3, 4]
-		li[0].scatter(x,dum,color='r')
-		#li[0].scatter(x,inv,color='b')
-		#li[0].scatter(x,in_dum,color='g')
-		li[0].scatter(x,dum_in,color='m')
-		#li[0].scatter(x,real,color="y")
-		#li[0].scatter(x,add,color="c")
-		label_tk=["t0:1 t1:0 t2:0","t0:2 t1:0 t2:1","t0:1 t1:1 t2=0"]
-		axis_tk = np.arange(len(label_tk))
-		#print(axis_tk)
-		li[1].bar(axis_tk-0.2,tk0, 0.15, label="t0", hatch="x")
-		li[1].bar(axis_tk,tk1, 0.15, label="t1", hatch="|")
-		li[1].bar(axis_tk+0.2,tk2, 0.15, label="t2", hatch="*")
-		li[1].set_xticks(axis_tk)
-		li[1].set_xticklabels(label_tk)
-		li[1].set_ylabel("CPU usage (%)",fontsize=14)
-		#li[1].scatter(x_ph,dum_ph,color='r')
-		#li[1].scatter(x_ph,inv_ph,color='b')
-		#li[1].scatter(x_ph,in_dum_ph,color='g')
-		#li[1].scatter(x_ph,dum_in_ph,color='m')
-		#li[1].scatter(x_ph,real_ph,color="y")
-		#li[1].scatter(x_ph,add_ph,color="c")
-		
-		z1 = np.polyfit(x,dum,1)
-		z2 = np.polyfit(x,inv,1)
-		z3 = np.polyfit(x,in_dum,1)
-		z4 = np.polyfit(x,dum_in,1)
-		z5 = np.polyfit(x,real,1)
-		z6 = np.polyfit(x,add,1)
-		p1 = np.poly1d(z1)
-		p2 = np.poly1d(z2)
-		p3 = np.poly1d(z3)
-		p4 = np.poly1d(z4)
-		p5 = np.poly1d(z5)
-		p6 = np.poly1d(z6)
-
-		z1_ph = np.polyfit(x_ph,dum_ph,1)
-		z2_ph = np.polyfit(x_ph,inv_ph,1)
-		z3_ph = np.polyfit(x_ph,in_dum_ph,1)
-		z4_ph = np.polyfit(x_ph,dum_in_ph,1)
-		z5_ph = np.polyfit(x_ph,real_ph,1)
-		z6_ph = np.polyfit(x_ph,add_ph,1)
-		p1_ph = np.poly1d(z1_ph)
-		p2_ph = np.poly1d(z2_ph)
-		p3_ph = np.poly1d(z3_ph)
-		p4_ph = np.poly1d(z4_ph)
-		p5_ph = np.poly1d(z5_ph)
-		p6_ph = np.poly1d(z6_ph)
-
-		li[0].plot(x,p1(x),"r--",label=r'$T(t_1,k*t_1)$')
-		#li[0].plot(x,p2(x),"b--",label=r'$T(t_2,k*t_2)$')
-		#li[0].plot(x,p3(x),"g--",label=r'$T(t_1,k*t_2)$')
-		li[0].plot(x,p4(x),"m--",label=r'$T(t_2,k*t_1)$')
-		#li[0].plot(x,p5(x),"y--",label=r'$T_{t2}(j*t_1,k*t_2)$')
-		#li[0].plot(x,p6(x),"c--",label=r'$T(t_2,j*t_1)+T(t_2,k*t_2)$')
-
-		#li[1].plot(x_ph,p1_ph(x_ph),"r--",label=r'$T(t_1,k*t_1)$')
-		#li[1].plot(x_ph,p2_ph(x_ph),"b--",label=r'$T(t_2,k*t_2)$')
-		#li[1].plot(x_ph,p3_ph(x_ph),"g--",label=r'$T(t_1,k*t_2)$')
-		#li[1].plot(x_ph,p4_ph(x_ph),"m--",label=r'$T(t_2,k*t_1)$')
-		#li[1].plot(x_ph,p5_ph(x_ph),"y--",label=r'$T_{t2}(j*t_1,k*t_2)$')
-		#li[1].plot(x_ph,p6_ph(x_ph),"c--",label=r'$T(t_2,j*t_1)+T(t_2,k*t_2)$')
-		li[0].legend(loc="upper left")
-		li[1].legend(loc="upper right")
-		li[0].set_title("a")
-		li[1].set_title("b")
-		#li[1].set_title("b")
-		li[0].set_ylabel("Average service time(s)",fontsize=14)
-		li[0].set_xlabel("k, j (# of interfering tasks already running)",fontsize=14)
-		li[1].set_xlabel("number and type of tasks running",fontsize=14)
-		#li[1].set_xlabel("k, j (# of interfering tasks already running) ")
-		fig1.tight_layout()
-		plt.show()
-		fig, ax1 = plt.subplots()
-		rep = [1,2,3,4,5,6,7,8,9]
-		s_time = [2.65, 2.95, 3.06, 3.11, 3.11, 3.13, 3.13, 3.139, 3.13]
-		pf = [0.567, 0.4567, 0.43, 0.402, 0.39, 0.34, 0.338, 0.333, 0.338]
-		ax1.set_xlabel(r'Maximum number of replication $\gamma$', fontsize=14)
-		ax1.set_ylabel('Average service time (s)',fontsize=14)
-		ax1.plot(rep,s_time,'r-',label="Service time")
-		ax1.legend(loc="upper left")
-		ax2 = ax1.twinx()
-		ax2.set_ylabel('Average probability of failure',fontsize=14)
-		ax2.plot(rep,pf,'b-',label="Probability of failure")
-		ax2.legend(loc="lower left")
-		fig.tight_layout()
-		plt.show()
-
-		#print(ed0_latency)
-"""	
-"""
-	
-		schedule_time_ibot = schedule_time_ibot/num_arrivals		
-		schedule_time_petrel = schedule_time_petrel/num_arrivals
-		schedule_time_lavea = schedule_time_lavea/num_arrivals
-		schedule_time_rr = schedule_time_rr/num_arrivals
-		schedule_time_rd = schedule_time_rd/num_arrivals
-		if append_idx == 1 or append_idx == 11 or append_idx == 31 or append_idx == 61 or append_idx == 99:
-			orch_time_ibot.append(schedule_time_ibot)
-			orch_time_pet.append(schedule_time_petrel)
-			orch_time_lav.append(schedule_time_lavea)
-			orch_time_rr.append(schedule_time_rr)
-			orch_time_rd.append(schedule_time_rd)
-		append_idx+=1
-	num_edge_inst = [1,11,31,61,100]
-	fig2, axs2 = plt.subplots(1,sharex=True,figsize=(10,12))
-	axs2.plot(num_edge_inst,orch_time_ibot,'<-' ,label="I-BOT")
-	axs2.plot(num_edge_inst,orch_time_pet,'-*', label="PETREL")
-	axs2.plot(num_edge_inst,orch_time_lav,'-X', label="LAVEA")
-	axs2.plot(num_edge_inst,orch_time_rr,'-o', label="RR")
-	axs2.plot(num_edge_inst,orch_time_rd,'>-', label="Random")
-	axs2.set(xlabel="# of edge devices")
-	axs2.set(ylabel="average scheduling time/ app instance (s)")
-	axs2.legend(loc="upper left")
-	plt.show()	
-"""

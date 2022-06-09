@@ -49,7 +49,6 @@ print(ssh_list_1)
 # client_scp = SCPClient(client.get_transport())
 for each in ssh_list_1:
     each.exec_command("rm ibdash/*.txt & rm ibdash/*.npy & rm ibdash/*.py & rm ibdash/*.json & rm ibdash/*.mp4 & rm ibdash/*.jpg & rm ibdash/*.csv")
-    #each.exec_command("mkdir ibdash")
     each.exec_command("kill $(lsof -t -i:5001)")
 
 for each in scp_list_1:

@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 toilet seat: 32.70% 
 medicine chest, medicine cabinet: 27.01% 
 toilet tissue, toilet paper, bathroom tissue: 18.76% 
+=======
+hand blower, blow dryer, blow drier, hair dryer, hair drier: 21.41% 
+paper towel: 19.52% 
+toilet tissue, toilet paper, bathroom tissue: 12.62% 
+>>>>>>> 75bd5f89560bdf171f5c2aeb9a960f1a96d4be04
