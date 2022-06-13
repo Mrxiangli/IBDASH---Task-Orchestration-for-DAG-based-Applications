@@ -32,7 +32,7 @@ import global_var
 
 pp = pprint.PrettyPrinter(indent=4)
 
-def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup,in_out_history,input_lookup,transmission_err_prov):
+def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,output_lookup,in_out_history,input_lookup):
 	######### IBOT-PI ######### 
 	print(in_out_history)
 	pf_ibdash_av=[]
@@ -975,8 +975,8 @@ if __name__ =='__main__':
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 8					#number of edge devices in DAG
-	transmission_err_prov = 3
+	num_edge_max = 5					#number of edge devices in DAG
+	global_var.transmission_err_prov = 1
 
 	access_dict={}
 	access_dict[0]="128.46.74.171" #nx1
@@ -984,10 +984,10 @@ if __name__ =='__main__':
 	access_dict[2]="128.46.74.173" #nx3
 	access_dict[3]="128.46.74.95"  #agx
 	access_dict[4]="128.46.32.175" #ashraf server
-	access_dict[5]="128.46.74.198"
-	access_dict[6]="128.46.74.176"
-	access_dict[7]="128.46.74.197"
-	access_dict[8]="128.46.73.218" #orchestrator
+	# access_dict[5]="128.46.74.198"
+	# access_dict[6]="128.46.74.176"
+	# access_dict[7]="128.46.74.197"
+	access_dict[5]="128.46.73.218" #orchestrator
 	
 	global_var.device_list=[]
 	global_var.socket_list = []
@@ -1007,7 +1007,7 @@ if __name__ =='__main__':
 	for i in range(num_edge_max):
 		Thread(target = connection_listening_thread, args=(global_var.socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 
-	periodic_network_test(transmission_err_prov)
+	
 	dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list=loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,task_file_dic,access_dict)
 
 	# send identifier to each device, every device aware the presence of other devices
@@ -1028,11 +1028,11 @@ if __name__ =='__main__':
 		ntwk_test=network_test()
 		global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
 		for idx in range(len(global_var.socket_list)):
-			send_ntwk_test(global_var.socket_list[idx],transmission_err_prov)
+			send_ntwk_test(global_var.socket_list[idx],global_var.transmission_err_prov)
 
 		# start the network speed test
 		#periodic_network_test(transmission_err_prov)
-		threading.Timer(20, periodic_network_test,[transmission_err_prov]).start()
+		periodic_network_test()
 
 	#generate the random task arrival time 
 	task_time = np.array(sorted(random.sample(range(1,app_inst_time),num_arrivals)))
@@ -1101,7 +1101,7 @@ if __name__ =='__main__':
 		for i in range(num_edge) :
 			edge_info[i]={"total": 10000, "available": 4000}
 		if args.sch == "ibdash":
-			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup,global_var.in_out_history,input_lookup,transmission_err_prov)
+			time_x, average_service_time_ibdash, service_time_ibdash_x, pf_ibdash_av,load_ed,dispatcher_dic=run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup,global_var.in_out_history,input_lookup)
 		if args.sch == "petrel":
 			time_x_petrel, average_service_time_petrel, service_time_x_petrel, pf_petrel_av,load_ed_petrel=run_petrel(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lavea":

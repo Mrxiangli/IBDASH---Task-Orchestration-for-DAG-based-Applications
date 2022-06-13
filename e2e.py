@@ -29,7 +29,9 @@ if __name__ =='__main__':
 		if args.app == "video":
 			file = "analytic_result_{}.txt".format(i)
 		if args.app == "mapreduce":
-			file = "mapreduce_result_{}.txt".format(i)	
+			file = "mapreduce_result_{}.txt".format(i)
+		if args.app == "matrix":
+			file = "tk4_output_{}.npy".format(i)	
 		result_list.append(file) 
 	global lock
 	lock = True

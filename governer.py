@@ -24,6 +24,8 @@ def json_file_loader(file):
 	return data
 
 def execute_main_task(main_task,instance_count):
+	while os.path.exists(main_task) == False:
+		pass
 	command="python {} --count {}".format(main_task,instance_count)
 	return command
 
@@ -156,7 +158,6 @@ def send_resend_request(s,identifier,file):
 	global lock
 	lock.acquire()
 	s.send("R".encode())
-	s.send(str(identifier).ljust(MSG_SIZE).encode())
 	s.send(str(file).ljust(MSG_SIZE).encode())
 	lock.release()
 
@@ -248,7 +249,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 			# receiving network test request
 			elif msg_type == "P":
 				trans_err_prov= int(receive_request(10,client_socket).decode().strip())
-				Process(target=network_speed_test, args=(device_list,trans_err_prov,)).start()
+				print(f"transerr: {trans_err_prov}")
+				Thread(target=network_speed_test, args=(device_list,trans_err_prov,)).start()
 				
 			# receiving file request 
 			elif msg_type == "R":
@@ -314,6 +316,7 @@ def processing_thread(command,socket_list):
 			if time.time() - start_time > 80:
 				print(f"{allocation_file} cannot be found on the device, exiting")
 				sys.exit()
+		allocation_dic=json_file_loader(allocation_file)
 	
 	#running a check to see if all input files are available; if missing, try to retrieve from replicated services
 	for input_file in input_lookup[str(tk_num)]:

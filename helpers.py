@@ -23,6 +23,7 @@ from queue import Queue
 from icmplib import ping, multiping
 import global_var
 import ast
+from multiprocessing import Process
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -491,15 +492,9 @@ def connection_listening_thread(client_socket,address):
         if msg_type == 'T':
             received_id = receive_request(NAME_SIZE,client_socket).decode()
             test_result = receive_request(NAME_SIZE,client_socket).decode()
-            p2p_result=ast.literal_eval(test_result)
-            for key in p2p_result.keys():
-                if key == int(received_id):
-                    pass
-                else:
-                    global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
+            Thread(target=network_update_size, args=(test_result,received_id,)).start()
         
-        if msg_type == "R":
-                
+        if msg_type == "R":  
                 file_requested = receive_request(NAME_SIZE,client_socket).decode().strip()
                 print(f"receiving request to resend file {file_requested} ")
                 if os.path.exists(str(file_requested)) == True:
@@ -507,43 +502,11 @@ def connection_listening_thread(client_socket,address):
         
         if msg_type == 'U':
             tk_id = receive_request(TASK_ID_SIZE,client_socket)
-            #tk_id = client_socket.recv(TASK_ID_SIZE).decode()
-            input_size = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
-            output_size = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
-            print("===============================================================")
-            print(f"input size: {input_size}")
-            print(f"output size: {output_size}")
-            #ensure the length is the same
-            try:
-                if len(input_size.keys())==len(global_var.in_out_history[int(tk_id)]['input'].keys()):
-                    input_size_list = []
-                    for each_key in input_size.keys():
-                        input_size_list.append(float(input_size[each_key]))
-                    for each_key in global_var.in_out_history[int(tk_id)]['input'].keys():
-                        if len(global_var.in_out_history[int(tk_id)]['input'][each_key]) > 20:
-                            for i in range(10):
-                                global_var.in_out_history[int(tk_id)]['input'][each_key].pop(0)
-                        else:
-                            global_var.in_out_history[int(tk_id)]['input'][each_key].append(input_size_list.pop(0))
-            except:
-                pass
-            
-            try: 
-                if len(output_size.keys())==len(global_var.in_out_history[int(tk_id)]['output'].keys()):
-                    output_size_list = []
-                    for each_key in output_size.keys():
-                        output_size_list.append(float(output_size[each_key]))
-                    for each_key in global_var.in_out_history[int(tk_id)]['output'].keys():
-                        if len(global_var.in_out_history[int(tk_id)]['output'][each_key]) > 20:
-                            for i in range(10):
-                                global_var.in_out_history[int(tk_id)]['output'][each_key].pop(0)
-                        else:
-                            global_var.in_out_history[int(tk_id)]['output'][each_key].append(output_size_list.pop(0))
-            except:
-                pass
+            input_size = receive_request(REQUEST_SIZE,client_socket).decode().strip()
+            output_size = receive_request(REQUEST_SIZE,client_socket).decode().strip()
+            Process(target=size_update_process, args=(input_size,output_size,tk_id,)).start()
 
         if msg_type == 'F':
-            start = time.time()
             received = client_socket.recv(NAME_SIZE).decode()
             filename, filesize, space = received.split(SEPARATOR)
             # remove absolute path if there is
@@ -552,17 +515,12 @@ def connection_listening_thread(client_socket,address):
             # convert to integer
             filesize = int(filesize)
             bytes_read = receive_request(filesize,client_socket)
-            # #Receiving files
-            # received_size = 0
-            # count = 0
-            # bytes_read = b''
+
             with open(filename, "wb") as f:
                 f.write(bytes_read)
 
             if len(bytes_read) == filesize:
-            #if received_size == filesize:
                 bytes_read = receive_request(4,client_socket)
-                #print(len(bytes_read.decode()))
                 if bytes_read.decode() != "/EOF":
                     if "\n" in bytes_read.decode():
                         bytes_read = receive_request(1,client_socket)
@@ -574,10 +532,6 @@ def connection_listening_thread(client_socket,address):
                             client_socket.close()
                             return -1
 
-                # if received_size == filesize:
-                #     bytes_read = client_socket.recv(4)
-                #     if bytes_read.decode() != "/EOF":
-                #         print(f" error transmitting {filename}")
             print(f"{filename} is received at {time.time()}")
             send_clean_command(instance_count)
             #as this take result back, which means one application instance is all done remove all the meta files
@@ -641,11 +595,12 @@ def loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,
     edge_file.close()
     return dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list
 
-def periodic_network_test(transmission_err_prov):
+def periodic_network_test():
     ntwk_test=network_test()
+    threading.Timer(20, periodic_network_test).start()
     global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
     for idx in range(len(global_var.socket_list)):
-        send_ntwk_test(global_var.socket_list[idx],transmission_err_prov)
+        send_ntwk_test(global_var.socket_list[idx],global_var.transmission_err_prov)
     print(global_var.ntwk_matrix)
 
 def creat_input_output_regression_history(app_path,dependency_dic,input_lookup,output_lookup):
@@ -702,12 +657,54 @@ def update_input_output_regression_history(socket_list,instance_count,dependency
             task_allocation = dispatcher_dic[instance_count][str(task)]
             #use the lowest latency allocation to ensure the update pace is fast
             send_size_update(socket_list[int(task_allocation[0])],str(input_size_request_list).encode(),str(output_size_request_list).encode(),task)
-            #print(f"+=========task {task}==========+")
-            #print(input_size_request_list)
-            #print(output_size_request_list)
+            # print(f"+=========task {task}==========+")
+            # print(input_size_request_list)
+            # print(output_size_request_list)
 
 def receive_request(size,client_socket):
     bytes_read = client_socket.recv(size)
     while size - len(bytes_read) != 0:
         bytes_read += client_socket.recv(size - len(bytes_read))
     return bytes_read
+
+
+def size_update_process(input_size,output_size,tk_id):
+    input_size = ast.literal_eval(input_size)
+    output_size = ast.literal_eval(output_size)
+    try:
+        if len(input_size.keys())==len(global_var.in_out_history[int(tk_id)]['input'].keys()):
+            input_size_list = []
+            for each_key in input_size.keys():
+                input_size_list.append(float(input_size[each_key]))
+            for each_key in global_var.in_out_history[int(tk_id)]['input'].keys():
+                if len(global_var.in_out_history[int(tk_id)]['input'][each_key]) > 20:
+                    for i in range(10):
+                        global_var.in_out_history[int(tk_id)]['input'][each_key].pop(0)
+                else:
+                    global_var.in_out_history[int(tk_id)]['input'][each_key].append(input_size_list.pop(0))
+    except:
+        pass
+    
+    try: 
+        if len(output_size.keys())==len(global_var.in_out_history[int(tk_id)]['output'].keys()):
+            output_size_list = []
+            for each_key in output_size.keys():
+                output_size_list.append(float(output_size[each_key]))
+            for each_key in global_var.in_out_history[int(tk_id)]['output'].keys():
+                if len(global_var.in_out_history[int(tk_id)]['output'][each_key]) > 20:
+                    for i in range(10):
+                        global_var.in_out_history[int(tk_id)]['output'][each_key].pop(0)
+                else:
+                    global_var.in_out_history[int(tk_id)]['output'][each_key].append(output_size_list.pop(0))
+    except:
+        pass
+
+def network_update_size(test_result,received_id):
+    p2p_result=ast.literal_eval(test_result)
+    for key in p2p_result.keys():
+        if key == int(received_id):
+            pass
+        else:
+            global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
+
+

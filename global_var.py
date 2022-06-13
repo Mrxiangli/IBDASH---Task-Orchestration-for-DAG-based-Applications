@@ -4,3 +4,4 @@ def initialize():
 	global device_list
 	global socket_list
 	global in_out_history
+	global transmission_err_prov
