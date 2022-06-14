@@ -485,12 +485,13 @@ def connection_listening_thread(client_socket,address):
 		if msg_type == 'T':
 			received_id = receive_request(NAME_SIZE,client_socket).decode()
 			test_result = receive_request(NAME_SIZE,client_socket).decode()
-			p2p_result=ast.literal_eval(test_result)
-			for key in p2p_result.keys():
-				if key == int(received_id):
-					pass
-				else:
-					global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
+			#p2p_result=ast.literal_eval(test_result)
+			Thread(target=network_update_size, args=(test_result,received_id,)).start()
+			# for key in p2p_result.keys():
+			# 	if key == int(received_id):
+			# 		pass
+			# 	else:
+			# 		global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
 		
 		if msg_type == "R":
 				
@@ -504,6 +505,7 @@ def connection_listening_thread(client_socket,address):
 			#tk_id = client_socket.recv(TASK_ID_SIZE).decode()
 			input_size = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
 			output_size = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
+			#size_update_process(input_size,output_size,tk_id)
 			Thread(target=size_update_process, args=(input_size,output_size,tk_id,)).start()
 			# print("===============================================================")
 			# print(f"input size: {input_size}")
@@ -639,7 +641,7 @@ def loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,
 	return dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list
 
 def periodic_network_test():
-	threading.Timer(100, periodic_network_test).start()
+	threading.Timer(20, periodic_network_test).start()
 	ntwk_test=network_test()
 	global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
 	for idx in range(len(global_var.socket_list)):
