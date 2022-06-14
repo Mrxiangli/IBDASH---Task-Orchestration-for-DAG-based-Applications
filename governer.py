@@ -24,7 +24,7 @@ def json_file_loader(file):
 	return data
 
 def execute_main_task(main_task,instance_count):
-	while os.path.exists(main_task) == False:
+	while os.path.exists(main_task) ==  False:
 		pass
 	command="python {} --count {}".format(main_task,instance_count)
 	return command
@@ -44,22 +44,22 @@ def next_task(current_tk,depend_lookup,input_lookup):
 
 # Network test function: send a ping to all devices in the device list and retrieve their 
 # communication speed and send the updat eback to orchestrator
-def network_speed_test(device_list, trans_err_prov):
-	p2p_test=network_test(device_list, trans_err_prov)
+def network_speed_test(device_list,transerr):
+	p2p_test=network_test(device_list,transerr)
 	send_ntwk_test(socket_list[-1],p2p_test,IDENTIFIER)
 
-def network_test(device_list, trans_err_prov):
+def network_test(device_list,transerr):
 	p2p_test={}
 	for idx,ip_address in enumerate(device_list):
 		result = ping(ip_address,count=5,payload_size=1024,interval=0.05,privileged=False)
-		print(f"avg_rtt:{result.avg_rtt}")
-		p2p_test[idx]=round(((1024/(((result.avg_rtt)*trans_err_prov)/2))*1000)/1000000,5)
+		#print(f"avg_rtt:{result.avg_rtt}")
+		p2p_test[idx]=round(((1024/((result.avg_rtt*transerr)/2))*1000)/1000000,4)
 	return p2p_test
 
 def send_ntwk_test(s,p2p_test,identifier):
 	BUFFER_SIZE = 4096 # send 4096 bytes each time step
 	MSG_SIZE = 256
-	global lock
+	global locks
 	lock.acquire()
 	s.send("T".encode())
 	s.send(str(identifier).ljust(MSG_SIZE).encode())
@@ -69,6 +69,8 @@ def send_ntwk_test(s,p2p_test,identifier):
 # Get the request input output pair size and send the result back 
 # to the orchestrator
 def update_size_proc(tk_id, input_request,output_request,client_socket):
+	input_request = ast.literal_eval(input_request.decode().strip())
+	output_request = ast.literal_eval(output_request.decode().strip())
 	input_size_list={}
 	output_size_list={}
 	for each in input_request:
@@ -116,30 +118,34 @@ def receive_request(size,client_socket):
 
 def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
 	received_size = 0
-	#bytes_read = b''
-	bytes_read = receive_request(filesize,client_socket)
+	bytes_read = b''
 	with open(filename, "wb") as f:
+		counter = 0
+		while (filesize - received_size) > BUFFER_SIZE:
+			bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
+			bytes_read+=bytes_read_chunk				
+			received_size += len(bytes_read_chunk)
+			counter+=1
+		residue = filesize - received_size
+
+		while residue > 0:
+			bytes_read_chunk = client_socket.recv(residue)
+			bytes_read += bytes_read_chunk
+			received_size += len(bytes_read_chunk)
+			if len(bytes_read) - residue == 0:
+				break
+			else:
+				residue -= len(bytes_read_chunk)
 
 		f.write(bytes_read)
 
 		print(f"{filename} is received")
-		if len(bytes_read) == filesize:
-		#if received_size == filesize:
-			bytes_read = receive_request(4,client_socket)
-			print(bytes_read.decode() + "!")
-			print(bytes_read)
-			#print(len(bytes_read.decode()))
+		if received_size == filesize:
+			bytes_read = client_socket.recv(4)
 			if bytes_read.decode() != "/EOF":
-				print(f"filesize={filesize}")
-				if "\n" in bytes_read.decode():
-					bytes_read = receive_request(1,client_socket)
-					if bytes_read.decode() == "F":
-						pass
-					else:
-						print(f" error transmitting {filename}, exiting")
-						print(client_socket.recv(10).decode())
-						client_socket.close()
-						return -1
+				print(f" error transmitting {filename}, exiting")
+				client_socket.close()
+				return -1
 
 # Utility functon for sending command
 def send_command(s,msg):
@@ -248,9 +254,9 @@ def connection_listening_thread(client_socket,address, command_queue):
 
 			# receiving network test request
 			elif msg_type == "P":
-				trans_err_prov= int(receive_request(10,client_socket).decode().strip())
-				print(f"transerr: {trans_err_prov}")
-				Thread(target=network_speed_test, args=(device_list,trans_err_prov,)).start()
+				transerr= float(receive_request(10,client_socket).decode().strip())
+				print(f"transerr:{transerr}")
+				Thread(target=network_speed_test, args=(device_list,transerr,)).start()
 				
 			# receiving file request 
 			elif msg_type == "R":
@@ -261,8 +267,8 @@ def connection_listening_thread(client_socket,address, command_queue):
 			# receiving file size request
 			elif msg_type == "S":
 				tk_id = client_socket.recv(TASK_ID_SIZE).decode()
-				input_request = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
-				output_request = ast.literal_eval(receive_request(REQUEST_SIZE,client_socket).decode().strip())
+				input_request = receive_request(REQUEST_SIZE,client_socket)
+				output_request = receive_request(REQUEST_SIZE,client_socket)
 				Thread(target=update_size_proc, args=(tk_id, input_request,output_request,client_socket,)).start()	
 						
 			# receiving command	
@@ -316,7 +322,6 @@ def processing_thread(command,socket_list):
 			if time.time() - start_time > 80:
 				print(f"{allocation_file} cannot be found on the device, exiting")
 				sys.exit()
-		allocation_dic=json_file_loader(allocation_file)
 	
 	#running a check to see if all input files are available; if missing, try to retrieve from replicated services
 	for input_file in input_lookup[str(tk_num)]:
@@ -367,8 +372,6 @@ def processing_thread(command,socket_list):
 	if err:
 		print(f"task {command} did not finish execution, exiting! \n Error: {err}")
 		sys.exit()
-	if out:
-		print(f"task {command} has the following output {out}")
 
 	# send the output from this task to the edge devices that will execute the depedent tasks
 	print("=============================================== sending corresponding tasks")

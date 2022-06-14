@@ -154,7 +154,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 													# using the previous file size: this can be changed accordingly later
 													filesize = global_var.in_out_history[int(each_task)]['input'][each_input_file][-1]
 													# print(f" filename: {filename}, size :{filesize}")
-													tmp_trans_time = math.ceil((filesize/transfer_speed) * transmission_err_prov)
+													tmp_trans_time = math.ceil(filesize/transfer_speed)
 													if tmp_trans_time > data_trans_t:
 														data_trans_t = tmp_trans_time
 												else:
@@ -270,7 +270,7 @@ def run_ibdash(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depe
 				#pass
 			dispatcher_dic[instance_count]=allocation
 
-			#allocation={'0': [1], '1': [4], '2': [4], '3': [2], "4":[2], "5":[3], "6":[3], "7":[3]}
+			#allocation={'0': [0], '1': [1], '2': [0], '3': [1], '4': [0], '5': [1], '6': [0], '7': [1]}
 			print(f"Task allocation for instance {instance_count} : {allocation}")
 			print(f"Instance count {instance_count} start dispatching")
 			get_times_stamp(instance_count)
@@ -984,16 +984,12 @@ if __name__ =='__main__':
 	access_dict[2]="128.46.74.173" #nx3
 	access_dict[3]="128.46.74.95"  #agx
 	access_dict[4]="128.46.32.175" #ashraf server
-	# access_dict[5]="128.46.74.198"
-	# access_dict[6]="128.46.74.176"
-	# access_dict[7]="128.46.74.197"
 	access_dict[5]="128.46.73.218" #orchestrator
 	
 	global_var.device_list=[]
 	global_var.socket_list = []
 	global_var.IDENTIFIER = num_edge_max
-	if args.sch == "ibdash":
-		global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
+	global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
 
 	for each in access_dict.keys():
 		global_var.device_list.append(access_dict[each])
@@ -1007,7 +1003,7 @@ if __name__ =='__main__':
 	for i in range(num_edge_max):
 		Thread(target = connection_listening_thread, args=(global_var.socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 
-	
+
 	dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list=loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,task_file_dic,access_dict)
 
 	# send identifier to each device, every device aware the presence of other devices
@@ -1023,15 +1019,8 @@ if __name__ =='__main__':
 		send_files(global_var.socket_list[idx],input_lp)
 		send_files(global_var.socket_list[idx],output_lp)
 
-	# do the inital network test
+	# start the network speed test
 	if args.sch == "ibdash":
-		ntwk_test=network_test()
-		global_var.ntwk_matrix=ntwk_matrix_update(ntwk_test,global_var.ntwk_matrix, global_var.IDENTIFIER)
-		for idx in range(len(global_var.socket_list)):
-			send_ntwk_test(global_var.socket_list[idx],global_var.transmission_err_prov)
-
-		# start the network speed test
-		#periodic_network_test(transmission_err_prov)
 		periodic_network_test()
 
 	#generate the random task arrival time 
@@ -1112,3 +1101,10 @@ if __name__ =='__main__':
 			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lats":
 			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list, ed_cpu_regression,ed_latency_regression,output_lookup)
+
+		#print(f"service time ibdash: {average_service_time_ibdash}")
+		#print(f"service time petrel: {average_service_time_petrel}")
+		#print(f"service time lavea: {average_service_time_lavea}")
+		#print(f"service time rr: {average_service_time_rr}")
+		#print(f"service time rd: {average_service_time_rd}")
+		#print(f"service time lats: {average_service_time_lats}")

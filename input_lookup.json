@@ -1,1 +1,1 @@
-{"0": {}, "1": [["tk0_output_", 1, ".npy"]], "2": [["tk0_output_", 1, ".npy"]], "3": [["tk0_output_", 1, ".npy"], ["tk2_output_", 1, ".npy"]], "4": [["tk1_output_", 1, ".npy"], ["tk3_output_", 1, ".npy"]], "end": [["tk4_output_", 1, "npy"]]}
+{"0": [["Digits_Train", 0, ".txt"]], "1": [["Digits_Train_Transform_", 1, ".txt"]], "2": [["Digits_Train_Transform_", 1, ".txt"]], "3": [["lightGBM_model_1_", 1, ".txt"], ["lightGBM_model_2_", 1, ".txt"], ["Digits_Test", 0, ".txt"], ["vectors_pca_", 1, ".npy"]], "end": [["predict_", 1]]}
