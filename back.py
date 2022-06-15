@@ -26,6 +26,7 @@ scp_list_1=[]
 ssh_list_1=[]
 scp_list_2=[]
 ssh_list_2=[]
+p=subprocess.Popen(["rm *.txt & rm allocation*.json & rm *.npy"], shell=True,stdin=None, stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
 
 #server_list = [("54.172.191.10","IBDASH_V2.pem"),("3.234.212.152","IBDASH_V2.pem"),("3.228.0.215","IBDASH_V2.pem")]
 
@@ -135,8 +136,8 @@ for each in scp_list_1:
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/tk_usage_profile.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/cpu_profile.py","/home/xiang/ibdash/")
 
-    each.put("/home/upsquared/Documents/IBDASH/governer.py","/home/xiang/ibdash/")
-    each.put("/home/upsquared/Documents/IBDASH/edge_list.json","/home/xiang/ibdash/")
+    each.put(f"{os.getcwd()}/governer.py","/home/xiang/ibdash/")
+    each.put(f"{os.getcwd()}/edge_list.json","/home/xiang/ibdash/")
 
     end = timer.time()
     print("transfer time: {}".format(end-start))
@@ -236,8 +237,8 @@ for each in scp_list_2:
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/tk_usage_profile.py","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/cpu_profile.py","/home/johnny/ibdash/")
 
-    each.put("/home/upsquared/Documents/IBDASH/governer.py","/home/johnny/ibdash/")
-    each.put("/home/upsquared/Documents/IBDASH/edge_list.json","/home/johnny/ibdash/")
+    each.put(f"{os.getcwd()}/governer.py","/home/johnny/ibdash/")
+    each.put(f"{os.getcwd()}/edge_list.json","/home/johnny/ibdash/")
 #    each.put("/home/jonny/Documents/Research/IBDASH_V2/profile_data/lightgbm/Digits_Train.txt","/home/xiang/ibdash/")
     end = timer.time()
     print("transfer time: {}".format(end-start))

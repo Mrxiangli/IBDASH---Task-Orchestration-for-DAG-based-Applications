@@ -320,6 +320,8 @@ def processing_thread(command,socket_list):
 			if time.time() - start_time > 80:
 				print(f"{allocation_file} cannot be found on the device, exiting")
 				sys.exit()
+
+		allocation_dic=json_file_loader(allocation_file)
 	
 	#running a check to see if all input files are available; if missing, try to retrieve from replicated services
 	for input_file in input_lookup[str(tk_num)]:
@@ -380,6 +382,11 @@ def processing_thread(command,socket_list):
 			for each_edge in allocation_dic[str(each_dest)]:
 				# no need to send if on the same device
 				if each_edge != IDENTIFIER:
+					start_timer = time.time()
+					while os.path.exists(intermediate_file) == False:
+						if time.time()-start_timer > 60:
+							print(f"file {intermediate_file} not found, exiting")
+							sys.exit()					
 					send_files(socket_list[each_edge],intermediate_file)
 
 	#looking for the dependency and find the next device and task
