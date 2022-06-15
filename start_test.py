@@ -61,8 +61,3 @@ for each in ssh_list_2:
     each.exec_command("source ~/.bashrc")
     time.sleep(2)
     each.exec_command("python /home/johnny/ibdash/governer.py")
-
-
-
-
-

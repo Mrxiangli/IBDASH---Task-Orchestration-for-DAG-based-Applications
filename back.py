@@ -30,10 +30,11 @@ ssh_list_2=[]
 #server_list = [("54.172.191.10","IBDASH_V2.pem"),("3.234.212.152","IBDASH_V2.pem"),("3.228.0.215","IBDASH_V2.pem")]
 
 server_list1=[
-              ("128.46.74.171",".xiang"),("128.46.74.172",".xiang"),("128.46.74.173",".xiang"),("128.46.74.95",".xiang"),
-              ("128.46.74.170",".xiang"),("128.46.74.176",".xiang"),("128.46.74.174",".xiang"),("128.46.74.177",".xiang"),
-              ("128.46.74.198",".xiang"),("128.46.74.197",".xiang"),("128.46.74.199",".xiang"),("128.46.74.191",".xiang"),
-              ("10.165.77.168",".xiang"),("10.165.77.167",".xiang"),("10.165.77.166",".xiang"),("128.46.74.82",".xiang")]
+              ("128.46.74.171",".xiang"),("128.46.74.172",".xiang"),("72.12.208.246",".xiang"),("128.46.74.95",".xiang"),
+              ("72.12.208.247",".xiang")]
+#,("128.46.74.176",".xiang"),("128.46.74.174",".xiang"),("128.46.74.177",".xiang"),
+#              ("128.46.74.198",".xiang"),("128.46.74.197",".xiang"),("128.46.74.199",".xiang"),("128.46.74.191",".xiang"),
+#              ("10.165.77.168",".xiang"),("10.165.77.167",".xiang"),("10.165.77.166",".xiang"),("128.46.74.82",".xiang")]
 #server_list1=[("128.46.74.95",".xiang")]
 #server_list2=[]
 server_list2=[("128.46.32.175",".johnny")]
@@ -53,12 +54,12 @@ for each in ssh_list_1:
 
 for each in scp_list_1:
     start = timer.time()
-    # profiling for lightgbm 
+    # profiling for lightgbm
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/profile.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/pca.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/train_1.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/train_2.py","/home/xiang/ibdash/")
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/com_test.py","/home/xiang/ibdash/") 
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/com_test.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/Digits_Train.txt","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/Digits_Test.txt","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/Digits_Train_Transform_0.txt","/home/xiang/ibdash/")
@@ -72,16 +73,16 @@ for each in scp_list_1:
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk0.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk1.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk2.py","/home/xiang/ibdash/")
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk3.py","/home/xiang/ibdash/") 
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk3.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk4.py","/home/xiang/ibdash/")
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk0_output_0.npy","/home/xiang/ibdash/")  
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk1_output_0.npy","/home/xiang/ibdash/")  
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk2_output_0.npy","/home/xiang/ibdash/")  
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk3_output_0.npy","/home/xiang/ibdash/")  
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk4_output_0.npy","/home/xiang/ibdash/")  
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk0_output_0.npy","/home/xiang/ibdash/")
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk1_output_0.npy","/home/xiang/ibdash/")
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk2_output_0.npy","/home/xiang/ibdash/")
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk3_output_0.npy","/home/xiang/ibdash/")
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk4_output_0.npy","/home/xiang/ibdash/")
 
  #   each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/Digits_Train.txt","/home/xiang/ibdash/")
- 
+
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/profile.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/video_app/video_split.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/video_app/extract_frame_1.py","/home/xiang/ibdash/")
@@ -134,8 +135,8 @@ for each in scp_list_1:
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/tk_usage_profile.py","/home/xiang/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/cpu_profile.py","/home/xiang/ibdash/")
 
-    each.put("/home/jonny/Documents/Research/IBDASH/governer.py","/home/xiang/ibdash/")
-    each.put("/home/jonny/Documents/Research/IBDASH/edge_list.json","/home/xiang/ibdash/")
+    each.put("/home/upsquared/Documents/IBDASH/governer.py","/home/xiang/ibdash/")
+    each.put("/home/upsquared/Documents/IBDASH/edge_list.json","/home/xiang/ibdash/")
 
     end = timer.time()
     print("transfer time: {}".format(end-start))
@@ -160,7 +161,7 @@ for each in scp_list_2:
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/pca.py","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/train_1.py","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/train_2.py","/home/johnny/ibdash/")
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/com_test.py","/home/johnny/ibdash/") 
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/com_test.py","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/Digits_Train.txt","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/Digits_Test.txt","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/lightgbm/lightGBM_model_1_0.txt","/home/johnny/ibdash/")
@@ -173,13 +174,13 @@ for each in scp_list_2:
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk0.py","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk1.py","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk2.py","/home/johnny/ibdash/")
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk3.py","/home/johnny/ibdash/") 
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk3.py","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk4.py","/home/johnny/ibdash/")
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk0_output_0.npy","/home/johnny/ibdash/")  
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk1_output_0.npy","/home/johnny/ibdash/")  
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk2_output_0.npy","/home/johnny/ibdash/")  
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk3_output_0.npy","/home/johnny/ibdash/")  
-    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk4_output_0.npy","/home/johnny/ibdash/")  
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk0_output_0.npy","/home/johnny/ibdash/")
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk1_output_0.npy","/home/johnny/ibdash/")
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk2_output_0.npy","/home/johnny/ibdash/")
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk3_output_0.npy","/home/johnny/ibdash/")
+    # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/matrix_app/tk4_output_0.npy","/home/johnny/ibdash/")
 
 
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/profile.py","/home/johnny/ibdash/")
@@ -235,8 +236,8 @@ for each in scp_list_2:
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/tk_usage_profile.py","/home/johnny/ibdash/")
     # each.put("/home/jonny/Documents/Research/IBDASH/profile_data/cpu_profile.py","/home/johnny/ibdash/")
 
-    each.put("/home/jonny/Documents/Research/IBDASH/governer.py","/home/johnny/ibdash/")
-    each.put("/home/jonny/Documents/Research/IBDASH/edge_list.json","/home/johnny/ibdash/")
+    each.put("/home/upsquared/Documents/IBDASH/governer.py","/home/johnny/ibdash/")
+    each.put("/home/upsquared/Documents/IBDASH/edge_list.json","/home/johnny/ibdash/")
 #    each.put("/home/jonny/Documents/Research/IBDASH_V2/profile_data/lightgbm/Digits_Train.txt","/home/xiang/ibdash/")
     end = timer.time()
     print("transfer time: {}".format(end-start))

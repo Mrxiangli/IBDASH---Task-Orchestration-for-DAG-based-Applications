@@ -64,4 +64,3 @@ def dispatch(directory, allocation,task_dict, instance_count, dependency_dic,inp
 			for each_edge in allocation[str(eachtask)]:
 				send_command(socket_list[each_edge],command)
 
-

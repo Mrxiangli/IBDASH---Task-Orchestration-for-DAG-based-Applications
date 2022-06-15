@@ -18,6 +18,15 @@ device_list = []
 
 lock = threading.Lock()
 
+def send_identifier(s,id):
+
+	ID_SIZE=10
+	global lock
+	lock.acquire()
+	s.send("Q".encode())
+	s.send(str(id).ljust(ID_SIZE).encode())
+	lock.release()
+
 def json_file_loader(file):
 	print(file)
 	data = json.load(open(file))
@@ -117,35 +126,17 @@ def receive_request(size,client_socket):
 	return bytes_read
 
 def receive_files(filesize,BUFFER_SIZE,filename,client_socket):
-	received_size = 0
-	bytes_read = b''
+	bytes_read = receive_request(filesize,client_socket)
 	with open(filename, "wb") as f:
-		counter = 0
-		while (filesize - received_size) > BUFFER_SIZE:
-			bytes_read_chunk = client_socket.recv(BUFFER_SIZE)
-			bytes_read+=bytes_read_chunk				
-			received_size += len(bytes_read_chunk)
-			counter+=1
-		residue = filesize - received_size
-
-		while residue > 0:
-			bytes_read_chunk = client_socket.recv(residue)
-			bytes_read += bytes_read_chunk
-			received_size += len(bytes_read_chunk)
-			if len(bytes_read) - residue == 0:
-				break
-			else:
-				residue -= len(bytes_read_chunk)
-
 		f.write(bytes_read)
 
-		print(f"{filename} is received")
-		if received_size == filesize:
-			bytes_read = client_socket.recv(4)
-			if bytes_read.decode() != "/EOF":
-				print(f" error transmitting {filename}, exiting")
-				client_socket.close()
-				return -1
+	print(f"{filename} is received")
+	if len(bytes_read) == filesize:
+		bytes_read = receive_request(4,client_socket)
+		if bytes_read.decode() != "/EOF":
+			print(f" error transmitting {filename}, exiting")
+			client_socket.close()
+			return -1
 
 # Utility functon for sending command
 def send_command(s,msg):
@@ -202,12 +193,12 @@ def connection_creation_thread(connection_queue, socket_q):
 		connection_queue.put([client_socket,address])
 		socket_q.put([client_socket,address])
 
-def spawn_listening_thread(connection_queue, command_queue):
+def spawn_listening_thread(connection_queue, command_queue,label_q):
 	while True:
 		while connection_queue.qsize() != 0:
 			print("waiting for connection queue to be filled")
 			client_socket,address = connection_queue.get()
-			Thread(target = connection_listening_thread, args=(client_socket,address,command_queue,)).start() #for each socket creating a listening thread
+			Thread(target = connection_listening_thread, args=(client_socket,address,command_queue,label_q,)).start() #for each socket creating a listening thread
 
 def spawn_command_thread(command_queue,socket_list):
 	print("spawn_command_thread started")
@@ -225,7 +216,7 @@ def spawn_command_thread(command_queue,socket_list):
 				prev_command.pop(command)
 				Thread(target = processing_thread, args=(command,socket_list,)).start() #for each
 
-def connection_listening_thread(client_socket,address, command_queue):
+def connection_listening_thread(client_socket,address, command_queue,label_q):
 	global IDENTIFIER
 	global CONNNECTION_EASTABLISHED
 	global device_list
@@ -241,10 +232,16 @@ def connection_listening_thread(client_socket,address, command_queue):
 	
 	while True:
 		if CONNNECTION_EASTABLISHED == True:
-			msg_type = client_socket.recv(1).decode()
+			msg_type = receive_request(1,client_socket).decode()
 			print(f"msg: {msg_type}")
+			
 			# receving file
-			if msg_type == 'F':
+			if msg_type == 'Q':
+				received = int(receive_request(10,client_socket).decode().strip())
+				print(f"put {client_socket} with id {received} in queue")
+				label_q.put((received,client_socket))
+				
+			elif msg_type == 'F':
 				received = receive_request(NAME_SIZE,client_socket).decode()
 				filename, filesize, space = received.split(SEPARATOR)
 				# remove absolute path if there is any
@@ -292,6 +289,7 @@ def connection_listening_thread(client_socket,address, command_queue):
 
 			else:
 				print(f'transmission error, unrecognizable message type: {msg_type} from {client_socket}, exiting')
+				print(client_socket.recv(10))
 				sys.exit()
 	print("socket closed =======================================")
 	client_socket.close()
@@ -416,13 +414,14 @@ def processing_thread(command,socket_list):
 if __name__ =='__main__':
 	connection_q = Queue()
 	command_q = PriorityQueue()
+	label_q = Queue()
 	socket_q = Queue()
 	socket_list=[]
 	CONNNECTION_EASTABLISHED = True
 
 	try:
 		Thread(target = connection_creation_thread, args = (connection_q, socket_q)).start()	# constantly colleccting all incoming connections and put them in a connection q
-		Thread(target = spawn_listening_thread, args=(connection_q,command_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
+		Thread(target = spawn_listening_thread, args=(connection_q,command_q,label_q,)).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 		command_thread=Thread(target = spawn_command_thread, args = (command_q,socket_list,)) # reading the command from the queue an spawn thread to execue the command
 		
 	except:
@@ -439,22 +438,43 @@ if __name__ =='__main__':
 	while IDENTIFIER < 0: pass
 
 	counter = 0
+	skip = True
 	while counter != len(edge_list.keys())- 1 - IDENTIFIER:
 		if socket_q.qsize()!=0: 
 			client_socket,address = socket_q.get()
-			ident = int(list(edge_list.keys())[list(edge_list.values()).index(address[0])])
-			socket_list[ident]=client_socket
+			if skip == True:
+				socket_list[-1]=client_socket
+				skip=False
+			else:
+				if label_q.qsize() != 0: 
+					print("adddddd 1")
+					ident, connected_socket = label_q.get()
+					#ident = int(receive_request(10,client_socket).decode().strip())
+					socket_list[ident]=connected_socket
+				#print(f"address: {address}")
+					print(connected_socket)
+			#ident = int(list(edge_list.keys())[list(edge_list.values()).index(address[0])])
 			counter +=1
 
 	for i in range(IDENTIFIER,-1,-1):
 		if i <= IDENTIFIER:
 			s = socket_connections(edge_list[str(i)],5001)
-			ident = int(list(edge_list.keys())[list(edge_list.values()).index(edge_list[str(i)])])
-			socket_list[ident]=s
+			#ident = int(list(edge_list.keys())[list(edge_list.values()).index(edge_list[str(i)])])
+			socket_list[i]=s
+			send_identifier(s,IDENTIFIER)
 			connection_q.put([s,edge_list[str(i)]]) 
+	print(socket_list)
 
 	for each_key in edge_list.keys():
 		device_list.append(edge_list[each_key])
+	
+	CONNNECTION_EASTABLISHED = True	
+
+	time.sleep(15)
+	while label_q.qsize()!=0:
+		ident, connected_socket = label_q.get()
+		#ident = int(receive_request(10,client_socket).decode().strip())
+		socket_list[ident]=connected_socket
 
 	command_thread.start()
-	CONNNECTION_EASTABLISHED = True
+

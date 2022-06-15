@@ -975,17 +975,18 @@ if __name__ =='__main__':
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 5					#number of edge devices in DAG
+	num_edge_max = 6					#number of edge devices in DAG
 	global_var.transmission_err_prov = 1
 
 	access_dict={}
 	access_dict[0]="128.46.74.171" #nx1
 	access_dict[1]="128.46.74.172" #nx2
-	access_dict[2]="128.46.74.173" #nx3
-	access_dict[3]="128.46.74.95"  #agx
-	access_dict[4]="128.46.32.175" #ashraf server
-	access_dict[5]="128.46.73.218" #orchestrator
-	
+	#access_dict[2]="128.46.74.173" #nx3
+	access_dict[2]="128.46.74.95"  #agx
+	access_dict[3]="128.46.32.175" #ashraf server
+	access_dict[4]="72.12.208.246" #orchestrator
+	access_dict[5]="72.12.208.247"
+	access_dict[6]="72.12.208.245"
 	global_var.device_list=[]
 	global_var.socket_list = []
 	global_var.IDENTIFIER = num_edge_max
@@ -1009,7 +1010,9 @@ if __name__ =='__main__':
 	# send identifier to each device, every device aware the presence of other devices
 	for idx,each in enumerate(global_var.socket_list):
 		send_label(global_var.socket_list[idx],idx)
-		send_files(global_var.socket_list[idx],edge_list)
+		#send_files(global_var.socket_list[idx],edge_list)
+
+	time.sleep(30)
 
 	# send the application related files to each device, this only nee to be done one time
 	for idx,each in enumerate(global_var.socket_list):

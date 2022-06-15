@@ -1,3 +1,5 @@
+
+
 import os.path
 import subprocess
 import argparse
@@ -69,4 +71,3 @@ if __name__ =='__main__':
 		time_file.write("instance {} end:".format(instance))
 		time_file.write(out)
 	time_file.close()
-
