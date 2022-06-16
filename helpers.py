@@ -24,6 +24,7 @@ from icmplib import ping, multiping
 import global_var
 import ast
 from multiprocessing import Process
+from sklearn.cluster import KMeans
 pp = pprint.PrettyPrinter(indent=4)
 
 PING_PACKET_SIZE=64
@@ -751,3 +752,37 @@ def network_update_size(test_result,received_id):
             pass
         else:
             global_var.ntwk_matrix[int(received_id)][key]=p2p_result[key]
+		
+def dcc_init(app,dcc_cluster_num):
+	file=open(os.path.join(os.getcwd(),"profile_data/dnn_nodes.json"))
+	nodes_data = json.load(file)
+	location=[]
+	initial_x = 0
+	initial_y = 0
+	for each_node in nodes_data["Vertices"]:
+		coordinate = each_node["location"]
+		location.append(coordinate)
+
+	kmeans = KMeans(n_clusters=dcc_cluster_num,random_state=3)
+	kmeans.fit(location)
+	cluster_dic={}
+	for idx, each in enumerate(kmeans.labels_):
+		if each not in cluster_dic:
+			cluster_dic[each]=[idx]
+		else:
+			cluster_dic[each].append(idx)
+
+
+	#since the original paper did not mention how to comput the computing capacity, we will use the interference based estimation time instead of the estimation based on capacity
+	#assuming the originator(in the orginal paper) is in cluster 0 by default
+	#for simplicity, no mobility in devices, which should give the best performance for the baseline => link duration = inf among all nodes 
+
+	file=open(os.path.join(os.getcwd(),f"profile_data/{app}/task_category.json"))
+	task_category = json.load(file)
+	#build task category dict
+	task_class_dict={}
+	for each in task_category["tasks"]:
+		if each["name"] not in task_class_dict.keys():
+			task_class_dict[int(each["name"])]=each["class"]
+	
+	return cluster_dic, task_class_dict

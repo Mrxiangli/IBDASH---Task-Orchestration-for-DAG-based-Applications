@@ -1,0 +1,29 @@
+{    
+    "Vertices":[
+        {
+            "name": "0",
+            "location" : [10,6]
+        },
+
+        {
+            "name": "1",
+            "location" : [5,3]
+        },
+
+        {
+            "name": "2",
+            "location" : [1,0]
+        },
+
+        {
+            "name": "3",
+            "location" : [18,2]
+        },
+
+        {
+            "name": "4",
+            "location" : [18,12]
+        }
+    ]
+}
+    

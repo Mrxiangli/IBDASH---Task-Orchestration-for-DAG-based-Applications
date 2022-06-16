@@ -29,6 +29,7 @@ from queue import Queue
 from icmplib import multiping
 from multiprocessing import Process
 import global_var 
+from sklearn.cluster import KMeans
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -598,6 +599,7 @@ def run_round_robin(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict
 					for idx in range(task_types):		# go through all task types   overall time complexity V * ed * num*task_type
 						x.append(ED_tasks[idx][ED_pred][k+i])
 					c=ED_c[ED_pred][task*task_types:task*task_types+task_types]
+					
 					predict_time = int(np.dot(w,x)+sum(c)) 		# this is merely the execution time
 					#pp.pprint(task_dict)
 					if task_dict[each_task][1][0]!="NULL":	# if a model is needed
@@ -920,7 +922,138 @@ def run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,depend
 			load_ed_lats[i] = np.add(load_ed_lats[i],ED_tasks[j][i])
 	return time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av, load_ed_lats
 
+def run_dcc(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk,task_file_dic,app_directory,inputfile_dic,socket_list,task_class_dict, cluster_dict, num_clusters,output_lookup):
+	model_info=dict()
+	for i in range(num_edge):
+		model_info[i]=[]
 
+	clock_time = np.arange(0,sim_time,1)
+	schedule_time_dcc = 0
+	ED_tasks = [[[0 for i in range(len(clock_time))] for j in range(num_edge)] for k in range(task_types) ]
+	non_meta_files = {}			#tracking the non-meta-file on each device
+	k=0
+	i=0
+	rp=0
+	pf_dcc_av=[]
+	instance_count = 0
+	dispatcher_dic={}
+	service_time_dcc=[]
+	for time in clock_time:
+		time = round(time,2)
+		if time not in task_time:
+			k+=1					# use k to track the unit time 
+			timer.sleep(1)
+		else:
+			timer.sleep(1)
+			i=0
+			start_time = timer.time()
+			dcc_pf = 1
+			instance_count += 1
+			allocation={}
+			tmp_pf_dic = {}						# temporary dictionary used to trakc probability of failure
+			for stage in vert_stage:			# go through each stage in the dag
+				longest_task_time=0
+				for each_task in vert_stage[stage]:			#go through each task in each stage
+					t_pred=sys.maxsize
+					ED_pred = -1
+					task=int(each_task)
+					model_upload_t = 0
+					#look for cluster 0 first
+					for each_device in cluster_dict[0]:
+						w=ED_m[each_device][task*task_types:task*task_types+task_types]
+						x=[]		
+						for idx in range(task_types):		# go through all task types   overall time complexity V * ed * num*task_type
+							x.append(ED_tasks[idx][each_device][k+i])
+						print(x)
+						c=ED_c[each_device][task*task_types:task*task_types+task_types]
+						if sum(np.array(x)>0) == 0:	# if no task is on the device
+							predict_time = c[task]
+						else:
+							predict_time = int(np.dot(w,x)+np.dot((np.array(x)>0),c)) 		# this is merely the execution time
+						#print(f"predict_time:{predict_time}")
+						if predict_time < t_pred:
+							t_pred = predict_time
+							ED_pred = each_device
+					#print(f"ed:{ED_pred}")
+					# check if the task can be offloaded to other cloudlets, finding the CH(cluster head) of the other cloudlets		
+					if task_class_dict[task][0]=="shared":
+						for cluster_num in range(1,num_clusters):
+							for each_device in cluster_dict[cluster_num]:
+								w=ED_m[each_device][task*task_types:task*task_types+task_types]
+								x=[]		
+								for idx in range(task_types):		# go through all task types   overall time complexity V * ed * num*task_type
+									x.append(ED_tasks[idx][each_device][k+i])
+								c=ED_c[each_device][task*task_types:task*task_types+task_types]
+								predict_time = int(np.dot(w,x)+sum(c)) 		# this is merely the execution time
+								if predict_time < t_pred:
+									t_pred = predict_time
+									ED_pred = each_device
+
+					#pp.pprint(task_dict)
+					if task_dict[each_task][1][0]!="NULL":	# if a model is needed
+						if task_dict[each_task][1] not in model_info[ED_pred]:
+								model_upload_t = math.ceil(task_dict[each_task][1][1]/ntbd)
+					#print(f"t_pred:{t_pred}")
+					t_pred = t_pred+model_upload_t
+					allocation[each_task]=[ED_pred]
+					parent_all_success = 1
+					#Calculating the probability of current placement
+					if dependency_dic[task] == [None]:
+						#print("k+i:{}, k+i+t_pred:{}".format(k+i, k+i+t_pred))
+						ProbF =  sum(pf_ed[ED_pred][task_time[0]:task_time[0]+i+t_pred])
+						tmp_pf_dic[task] = ProbF
+						#print(tmp_pf_dic)
+					else:
+						#building a temporary dependency list
+						current_task_parent=[]
+						for depend_tracker in dependency_dic[task]:
+							current_task_parent.append(depend_tracker[0])
+						for each_parent in current_task_parent:
+							parent_all_success = parent_all_success * (1-tmp_pf_dic[int(each_parent)])
+						ProbF = 1-parent_all_success*(1-sum(pf_ed[ED_pred][task_time[0]:task_time[0]+i+t_pred]))
+						tmp_pf_dic[task] = ProbF
+
+						# model uploading process		
+					if task_dict[each_task][1] not in model_info[ED_pred] and task_dict[each_task][1][0] != "NULL":			 			# if model is not available need to upload model
+						while edge_info[ED_pred]["available"] < task_dict[each_task][1][1]:		# pop the least recent used model until there is enough memory to hold the model
+							edge_info[ED_pred]["available"]+= model_info[ED_pred][0][1]
+							model_info[ED_pred].pop(0)
+						model_info[ED_pred].append(task_dict[each_task][1])
+						#pp.pprint(model_info)
+					else:
+						if task_dict[each_task][1][0] != "NULL":
+							model_info[ED_pred].append(model_info[ED_pred].pop(model_info[ED_pred].index(task_dict[each_task][1])))
+
+							# update the total execution latency
+					if t_pred > longest_task_time:
+						longest_task_time=t_pred
+					# update the tasks running on each edge device	
+					for j in range(k+i, k+i+t_pred):
+						ED_tasks[task][ED_pred][j]+=1
+				i=i+longest_task_time	# tracking the end to end latency
+			end_time = timer.time()
+			schedule_time_dcc += end_time - start_time
+			#print("==========application instance at time {} is done with scheduling=======".format(time))
+			print(f"Task allocation for instance {instance_count} : {allocation}")
+			print(f"Instance count {instance_count} start dispatching")
+			get_times_stamp(instance_count)
+			dispatch(app_directory,allocation,task_file_dic, instance_count, dependency_dic,inputfile_dic, socket_list,non_meta_files)
+			service_time_dcc.append(i/1000)
+			k=k+1
+			pf_dcc_av.append(tmp_pf_dic[task_types-1])
+	average_service_time_dcc = sum(service_time_dcc)/len(task_time)
+	service_time_x_dcc = []
+	time_x_dcc = []
+	load_ed_dcc = [0 for i in range(sim_time) for j in range(num_edge)]
+	for each in range(0,sim_time):
+		if each in task_time:
+			service_time_x_dcc.append(service_time_dcc.pop(0))
+			time_x_dcc.append(each/1000)
+			
+	for i in range(num_edge):
+		for j in range(task_types):
+			load_ed_dcc[i] = np.add(load_ed_dcc[i],ED_tasks[j][i])
+	return time_x_dcc, average_service_time_dcc, service_time_x_dcc, pf_dcc_av, load_ed_dcc
 
 
 if __name__ =='__main__':
@@ -975,56 +1108,65 @@ if __name__ =='__main__':
 	pF_thrs = args.pf					#probability of failure threshold
 	num_rep = args.rd					#maximum number of replication allowed
 	weight = args.jp 					#use this to control the joint optimization parameter alpha
-	num_edge_max = 6					#number of edge devices in DAG
+	num_edge_max = 5					#number of edge devices in DAG
 	global_var.transmission_err_prov = 1
+
+	dcc_cluster_num=2
+
+	simulation = 0
 
 	access_dict={}
 	access_dict[0]="128.46.74.171" #nx1
 	access_dict[1]="128.46.74.172" #nx2
-	#access_dict[2]="128.46.74.173" #nx3
-	access_dict[2]="128.46.74.95"  #agx
-	access_dict[3]="128.46.32.175" #ashraf server
-	access_dict[4]="72.12.208.246" #orchestrator
-	access_dict[5]="72.12.208.247"
-	access_dict[6]="72.12.208.245"
+	access_dict[2]="128.46.74.173" #nx3
+	access_dict[3]="128.46.74.95"  #agx
+	access_dict[4]="128.46.32.175" #ashraf server
+	#access_dict[4]="72.12.208.246" #orchestrator
+	#access_dict[5]="72.12.208.247"
+	#access_dict[6]="72.12.208.245"
+	access_dict[5]="128.46.73.218" #xiang system
 	global_var.device_list=[]
 	global_var.socket_list = []
 	global_var.IDENTIFIER = num_edge_max
-	global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
+	
+	if simulation == 0: 
+		global_var.ntwk_matrix=create_ntwk_matrix(num_edge_max+1)
 
 	for each in access_dict.keys():
 		global_var.device_list.append(access_dict[each])
 
-	# creat connection socket for each edge device
-	for i in range(num_edge_max):
-		s = socket_connections(access_dict[i],5001)
-		global_var.socket_list.append(s)
+	if simulation == 0:
+		# creat connection socket for each edge device
+		for i in range(num_edge_max):
+			s = socket_connections(access_dict[i],5001)
+			global_var.socket_list.append(s)
 
-	# creat listening thread for each device
-	for i in range(num_edge_max):
-		Thread(target = connection_listening_thread, args=(global_var.socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
+		# creat listening thread for each device
+		for i in range(num_edge_max):
+			Thread(target = connection_listening_thread, args=(global_var.socket_list[i],access_dict[i])).start() # for each socket connection in connection queue, creat a listenning thread and listen to command or receive files
 
 
 	dependency_file,task_file,dependency_lookup,input_lp,output_lp,edge_list=loading_input_files(dependency_dic,depend_lookup,input_lookup,output_lookup,task_file_dic,access_dict)
 
-	# send identifier to each device, every device aware the presence of other devices
-	for idx,each in enumerate(global_var.socket_list):
-		send_label(global_var.socket_list[idx],idx)
-		#send_files(global_var.socket_list[idx],edge_list)
+	if simulation == 0:
+		# send identifier to each device, every device aware the presence of other devices
+		for idx,each in enumerate(global_var.socket_list):
+			send_label(global_var.socket_list[idx],idx)
+			#send_files(global_var.socket_list[idx],edge_list)
 
-	time.sleep(30)
+		time.sleep(30)
 
-	# send the application related files to each device, this only nee to be done one time
-	for idx,each in enumerate(global_var.socket_list):
-		send_files(global_var.socket_list[idx],dependency_file)
-		send_files(global_var.socket_list[idx],task_file)
-		send_files(global_var.socket_list[idx],dependency_lookup)
-		send_files(global_var.socket_list[idx],input_lp)
-		send_files(global_var.socket_list[idx],output_lp)
+		# send the application related files to each device, this only nee to be done one time
+		for idx,each in enumerate(global_var.socket_list):
+			send_files(global_var.socket_list[idx],dependency_file)
+			send_files(global_var.socket_list[idx],task_file)
+			send_files(global_var.socket_list[idx],dependency_lookup)
+			send_files(global_var.socket_list[idx],input_lp)
+			send_files(global_var.socket_list[idx],output_lp)
 
-	# start the network speed test
-	if args.sch == "ibdash":
-		periodic_network_test()
+		# start the network speed test
+		if args.sch == "ibdash":
+			periodic_network_test()
 
 	#generate the random task arrival time 
 	task_time = np.array(sorted(random.sample(range(1,app_inst_time),num_arrivals)))
@@ -1059,6 +1201,9 @@ if __name__ =='__main__':
 
 		ED_m = np.array(pd.read_excel(EDmc_file,engine="openpyxl",sheet_name="edm",skiprows=0, nrows= num_edge))
 		ED_c = np.array(pd.read_excel(EDmc_file,engine="openpyxl",sheet_name="edc",skiprows=0, nrows= num_edge))
+
+		if args.sch == "dcc":
+			cluster_dic, task_class_dict=dcc_init(args.app,dcc_cluster_num)
 
 		#probabily of failure for each edge device (used expotential distribution for simulation)
 		#lam2=[0.000000015, 0.00000011, 0.000000015, 0.000000024, 0.00000009, 0.000000032, 0.00000031, 0.00000001,0.0000015,0.0000015]   	#mix
@@ -1104,6 +1249,8 @@ if __name__ =='__main__':
 			time_x_rd, average_service_time_rd, service_time_x_rd, pf_rd_av,load_ed_rd=run_random(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,output_lookup)
 		if args.sch == "lats":
 			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_lats(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list, ed_cpu_regression,ed_latency_regression,output_lookup)
+		if args.sch == "dcc":
+			time_x_lats, average_service_time_lats, service_time_x_lats, pf_lats_av,load_ed_lats=run_dcc(task_time,num_edge,task_types,vert_stage,ED_m,ED_c,task_dict,dependency_dic,pf_ed,pf_ed_tk, task_file_dic,app_directory,inputfile_dic, global_var.socket_list,task_class_dict, cluster_dic, dcc_cluster_num, output_lookup)
 
 		#print(f"service time ibdash: {average_service_time_ibdash}")
 		#print(f"service time petrel: {average_service_time_petrel}")

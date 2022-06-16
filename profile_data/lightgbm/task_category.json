@@ -1,0 +1,37 @@
+
+{    
+    "tasks":[
+        {
+            "name": "0",
+            "class" : ["local"],
+            "interaction":["high"],
+            "resource": ["NULL",0],
+            "performance":{"None":0}
+        },
+
+        {
+            "name": "1",
+            "class" : ["shared"],
+            "interaction":["low"],
+            "resource": ["NULL",0],
+            "performance":{"None":0}
+        },
+
+        {
+            "name": "2",
+            "class" : ["shared"],
+            "interation": ["high"],
+            "resource": ["NULL",0],
+            "performance":{"None":0}
+        },
+
+        {
+            "name": "3",
+            "class" : ["local"],
+            "interation": ["low"],
+            "resource": ["NULL",0],
+            "performance":{"None":0}
+        }
+
+    ]
+}
