@@ -62,7 +62,9 @@ python ibdash.py --app mapreduce --mc ED_mc_map.xlsx --sch ibdash
 ## Publication
 
 This work is accept at the 41st International Symposium on Reliable Distributed Systems (SRDS 2022)
+
 “Xiang Li, Mustafa Abdallah; Shikhar Suryavansh (Cisco Systems); Mung Chiang, Kwang Taik Kim, Saurabh Bagchi, "DAG-based Task Orchestration for Edge Computing", SRDS, 2022"
+
 A link to the paper can be found [here](chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://engineering.purdue.edu/dcsl/publications/papers/2022/ibdash-srds22.pdf)
 
 
