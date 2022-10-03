@@ -1,5 +1,14 @@
 # IBDASH -  Interference Based DAG Application Scheduling for Multi-Access Edge Computing
 
+## Publication
+
+This work is accept at the 41st International Symposium on Reliable Distributed Systems (SRDS 2022)
+
+“Xiang Li, Mustafa Abdallah; Shikhar Suryavansh (Cisco Systems); Mung Chiang, Kwang Taik Kim, Saurabh Bagchi, "DAG-based Task Orchestration for Edge Computing", SRDS, 2022"
+
+A link to the paper can be found [here](https://engineering.purdue.edu/dcsl/publications/papers/2022/ibdash-srds22.pdf)
+
+
 The framework of IBDASH can be divided into two parts: **Orchestrator** and **Client**. Orchestrator is where all the orchestrator started. When the orchestrator receives an application request (in DAG form), it starts orchestrating the task allocation based on the pre-profiled data of each client that joins the edge computing network, and then initiates the start of the application. On the clients' sides, each client is aware of the task allocation of the application and they perform the jobs assigned to them by the orchestrator individually and pass the intermediate results to the next task in the DAGs. The communication between clients is in a P2P manner. In the network, each node can act as an orchestrator as well as an client.
 
 ## Getting Started 
@@ -58,13 +67,5 @@ python ibdash.py --app mapreduce --mc ED_mc_map.xlsx --sch ibdash
 ## Acknowledgements
 
 [MXNET(arm64)](https://drive.google.com/file/d/1jr-kP1_zlLa9tx-GtdlBV3Nn20qRJgzY/view)
-
-## Publication
-
-This work is accept at the 41st International Symposium on Reliable Distributed Systems (SRDS 2022)
-
-“Xiang Li, Mustafa Abdallah; Shikhar Suryavansh (Cisco Systems); Mung Chiang, Kwang Taik Kim, Saurabh Bagchi, "DAG-based Task Orchestration for Edge Computing", SRDS, 2022"
-
-A link to the paper can be found [here](https://engineering.purdue.edu/dcsl/publications/papers/2022/ibdash-srds22.pdf)
 
 
