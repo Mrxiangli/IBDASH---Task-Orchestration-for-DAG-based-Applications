@@ -1,11 +1,5 @@
 # IBDASH -  Interference Based DAG Application Scheduling for Multi-Access Edge Computing
 
-## Publication
-
-This work is accept at the 41st International Symposium on Reliable Distributed Systems (SRDS 2022)
-
-“Xiang Li, Mustafa Abdallah; Shikhar Suryavansh (Cisco Systems); Mung Chiang, Kwang Taik Kim, Saurabh Bagchi, "DAG-based Task Orchestration for Edge Computing", SRDS, 2022"
-
 A link to the paper can be found [here](https://engineering.purdue.edu/dcsl/publications/papers/2022/ibdash-srds22.pdf)
 
 
@@ -63,6 +57,22 @@ An sample execution command is
 ```
 python ibdash.py --app mapreduce --mc ED_mc_map.xlsx --sch ibdash
 ```
+## Publication
+
+This work is accept at the 41st International Symposium on Reliable Distributed Systems (SRDS 2022), if you find our work is helpful, please cite our work as 
+
+```
+@INPROCEEDINGS{ibdash_xiang,
+  author={Li, Xiang and Abdallah, Mustafa and Suryavansh, Shikhar and Chiang, Mung and Kim, Kwang Taik and Bagchi, Saurabh},
+  booktitle={2022 41st International Symposium on Reliable Distributed Systems (SRDS)}, 
+  title={DAG-based Task Orchestration for Edge Computing}, 
+  year={2022},
+  volume={},
+  number={},
+  pages={23-34},
+  doi={10.1109/SRDS55811.2022.00013}}
+```
+
 
 ## Acknowledgements
 
